@@ -1,0 +1,3 @@
+@extends('layouts.store')
+@section('title', 'Sign in — VarStore')
+@section('content')<div class="auth-wrap"><div class="auth-card"><p class="eyebrow">Welcome back</p><h1>Sign in to VarStore</h1><p class="auth-subtitle">Access your account and keep your wardrobe in motion.</p>@if($errors->any())<div class="error-box">{{ $errors->first() }}</div>@endif<form method="POST" action="{{ route('login.store') }}" class="auth-form">@csrf<label>Email<input type="text" name="email" value="{{ old('email') }}" required></label><label>Password<input type="password" name="password" required></label><button class="button button-dark">Sign in <span>↗</span></button></form><p class="auth-foot">Demo admin: <b>admin@varstore</b> / <b>password</b></p></div></div>@endsection

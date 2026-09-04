@@ -1,0 +1,34 @@
+<?php
+
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminOrderController;
+use App\Http\Controllers\AdminProductController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\StoreController;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware('buyer')->group(function (): void {
+    Route::get('/', [StoreController::class, 'index'])->name('home');
+    Route::get('/about', [StoreController::class, 'about'])->name('about');
+    Route::get('/collection', [StoreController::class, 'collection'])->name('collection');
+    Route::get('/shop', [StoreController::class, 'collection'])->name('shop');
+    Route::get('/product/{product:slug}', [StoreController::class, 'show'])->name('products.show');
+    Route::get('/buy/{product:slug}', [StoreController::class, 'buy'])->name('products.buy');
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
+    Route::delete('/cart/{product}', [CartController::class, 'remove'])->name('cart.remove');
+    Route::post('/checkout', [CartController::class, 'checkout'])->name('checkout');
+});
+
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.store');
+Route::post('/register', [AuthController::class, 'register'])->name('register');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function (): void {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::resource('products', AdminProductController::class)->except(['show']);
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
+});
