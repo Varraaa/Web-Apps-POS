@@ -10,7 +10,7 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Hanya admin toko yang boleh mengelola katalog dan pesanan.
+        // Hanya admin toko yang boleh mengelola katalog produk dan pesanan.
         abort_unless($request->user()?->isAdmin(), 403);
 
         return $next($request);
