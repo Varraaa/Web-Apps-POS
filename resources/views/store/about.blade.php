@@ -45,7 +45,7 @@
                          alt="VarStore Studio Details" 
                          class="w-full h-full object-cover">
                     <div class="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded text-[11px] font-bold text-[#0d131a] uppercase tracking-wider">
-                        Atelier Studio № 01
+                        Atelier Studio NO 01
                     </div>
                 </div>
             </div>

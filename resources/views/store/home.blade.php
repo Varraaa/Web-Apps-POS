@@ -250,9 +250,10 @@
                     <span>Shop All Pieces</span>
                     <span>↗</span>
                 </a>
-                <a href="https://wa.me/6281297577567?text={{ urlencode('Halo VarStore Concierge, saya ingin konsultasi promo diskon.') }}" target="_blank" rel="noopener noreferrer" class="btn-luxury-outline border-white text-white hover:bg-white hover:text-[#0d131a]">
+                <a href="https://wa.me/6281297577567?text={{ urlencode('Halo VarStore Concierge, saya ingin konsultasi promo diskon.') }}" target="_blank" rel="noopener noreferrer" class="btn-luxury-glass group">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
                     <span>Chat Stylist</span>
-                    <span>✦</span>
+                    <span class="text-xs text-[#dfbe95] group-hover:text-[#0d131a] transition-all duration-300 group-hover:translate-x-0.5">✦</span>
                 </a>
             </div>
         </div>
