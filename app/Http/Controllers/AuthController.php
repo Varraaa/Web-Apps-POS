@@ -25,9 +25,19 @@ class AuthController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
-        $credentials = $request->validate(['email' => ['required', 'string', 'max:255'], 'password' => ['required', 'string']]);
+        $credentials = $request->validate([
+            'email' => ['required', 'string', 'max:255'],
+            'password' => ['required', 'string'],
+        ]);
+
         $user = User::where('email', $credentials['email'])->first();
-        abort_unless($user && Hash::check($credentials['password'], $user->password), 422, 'Email atau password tidak valid.');
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            return back()->withInput($request->only('email'))->withErrors([
+                'email' => 'Email atau password yang Anda masukkan tidak sesuai.',
+            ]);
+        }
+
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 

@@ -21,7 +21,15 @@
             @forelse($orders as $order)
                 <div class="admin-row order-row">
                     <span><b>#{{ $order->id }}</b><small>{{ $order->created_at->format('d M Y, H:i') }}</small></span><span><b>{{ $order->customer_name }}</b><small>{{ $order->customer_phone }}</small></span><span>{{ $order->items->sum('quantity') }}
-                        item(s)</span><span>Rp {{ number_format($order->total, 0, ',', '.') }}</span>
+                        item(s)</span><span>
+                        <b>Rp {{ number_format($order->total, 0, ',', '.') }}</b>
+                        @if($order->discount_amount > 0)
+                            <small style="color: #16a34a; font-weight: 700; display: block;">
+                                Hemat: -Rp {{ number_format($order->discount_amount, 0, ',', '.') }}
+                                @if($order->coupon_code) ({{ $order->coupon_code }}) @endif
+                            </small>
+                        @endif
+                    </span>
                     <form method="POST" action="{{ route('admin.orders.update', $order) }}">@csrf @method('PATCH')<select
                             name="status" onchange="this.form.submit()">
                             <option value="pending" @selected($order->status === 'pending')>Pending</option>

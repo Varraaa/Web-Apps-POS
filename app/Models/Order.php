@@ -11,11 +11,26 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'customer_name', 'customer_phone', 'shipping_address', 'total', 'status', 'whatsapp_reference'];
+    protected $fillable = [
+        'user_id',
+        'customer_name',
+        'customer_phone',
+        'shipping_address',
+        'subtotal',
+        'discount_amount',
+        'coupon_code',
+        'total',
+        'status',
+        'whatsapp_reference',
+    ];
 
     protected function casts(): array
     {
-        return ['total' => 'decimal:2'];
+        return [
+            'subtotal' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'total' => 'decimal:2',
+        ];
     }
 
     public function user(): BelongsTo

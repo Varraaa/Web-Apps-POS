@@ -61,6 +61,10 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
+        $this->call(DiscountSeeder::class);
+
+        $discountPool = [20, 0, 15, 0, 25];
+
         foreach ($catalog as $category => $products) {
             foreach ($products as $index => [$name, $price, $color, $imageUrl]) {
                 Product::create([
@@ -69,6 +73,7 @@ class DatabaseSeeder extends Seeder
                     'category' => $category,
                     'description' => "A considered {$category} piece from the NOVA/FORM collection, designed for daily wear.",
                     'price' => $price,
+                    'discount_percent' => $discountPool[$index % count($discountPool)],
                     'stock' => 12 + $index,
                     'size' => $category === 'Accessories' ? 'One size' : 'S / M / L / XL',
                     'color' => $color,
