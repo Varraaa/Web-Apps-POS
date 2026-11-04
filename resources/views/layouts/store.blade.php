@@ -55,9 +55,15 @@
             <a class="{{ request('sale') ? 'nav-link-active' : '' }}" href="{{ route('collection', ['sale' => 1]) }}">
                 Sale & Promo <span class="nav-badge-sale">Diskon</span>
             </a>
+            <a class="{{ request()->routeIs('tracking.*') ? 'nav-link-active' : '' }}" href="{{ route('tracking.index') }}">
+                Lacak Pesanan
+            </a>
             @auth
                 @if(auth()->user()->isAdmin())
-                    <a href="{{ route('admin.dashboard') }}" class="text-[#2563eb] font-extrabold">Admin Studio ↗</a>
+                    <a href="{{ route('admin.pos.index') }}" class="px-3 py-1 rounded-full bg-slate-900 text-white font-extrabold text-xs inline-flex items-center gap-1.5 shadow-sm hover:bg-slate-800 transition-colors">
+                        <span>🖥</span> Kasir POS
+                    </a>
+                    <a href="{{ route('admin.dashboard') }}" class="text-[#2563eb] font-extrabold text-xs">Admin Studio ↗</a>
                 @endif
             @endauth
         </nav>
@@ -99,12 +105,17 @@
             <span>Sale & Promo Vouchers</span>
             <span class="bg-[#c94a29] text-white text-[10px] px-2 py-0.5 rounded-full">Hemat s/d 25%</span>
         </a>
+        <a href="{{ route('tracking.index') }}" class="{{ request()->routeIs('tracking.*') ? 'font-black text-[#c9a982]' : '' }}">Lacak Pesanan Pelanggan</a>
         <a href="{{ route('cart.index') }}" class="flex items-center justify-between">
             <span>Tas Belanja</span>
             <span class="bg-[#0d131a] text-white text-xs px-2 py-0.5 rounded-full">{{ collect(session('cart', []))->sum('quantity') }}</span>
         </a>
         @auth
             @if(auth()->user()->isAdmin())
+                <a href="{{ route('admin.pos.index') }}" class="font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg flex items-center justify-between">
+                    <span>🖥 Buka Terminal Kasir POS</span>
+                    <span>→</span>
+                </a>
                 <a href="{{ route('admin.dashboard') }}" class="text-[#2563eb]">Admin Studio ↗</a>
             @endif
             <form method="POST" action="{{ route('logout') }}" class="pt-2">
@@ -204,6 +215,52 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
         </svg>
     </button>
+
+    <!-- Modern Mobile Bottom Navigation Bar -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-[#e2ded5] px-4 py-2 flex items-center justify-around shadow-lg">
+        <a href="{{ route('home') }}" class="flex flex-col items-center text-[10px] {{ request()->routeIs('home') ? 'font-black text-[#0d131a]' : 'text-slate-400' }}">
+            <span class="text-base">🏠</span>
+            <span>Home</span>
+        </a>
+        <a href="{{ route('collection') }}" class="flex flex-col items-center text-[10px] {{ request()->routeIs('collection', 'shop') ? 'font-black text-[#0d131a]' : 'text-slate-400' }}">
+            <span class="text-base">👗</span>
+            <span>Koleksi</span>
+        </a>
+        <a href="{{ route('tracking.index') }}" class="flex flex-col items-center text-[10px] {{ request()->routeIs('tracking.*') ? 'font-black text-[#0d131a]' : 'text-slate-400' }}">
+            <span class="text-base">🔍</span>
+            <span>Lacak</span>
+        </a>
+        <a href="{{ route('cart.index') }}" class="flex flex-col items-center text-[10px] relative {{ request()->routeIs('cart.*') ? 'font-black text-[#0d131a]' : 'text-slate-400' }}">
+            <span class="text-base">🛍</span>
+            <span>Tas</span>
+            @if(collect(session('cart', []))->sum('quantity') > 0)
+                <span class="absolute -top-1 -right-1 w-4 h-4 bg-[#0d131a] text-white rounded-full flex items-center justify-center text-[9px] font-bold">
+                    {{ collect(session('cart', []))->sum('quantity') }}
+                </span>
+            @endif
+        </a>
+        @auth
+            @if(auth()->user()->isAdmin())
+                <a href="{{ route('admin.pos.index') }}" class="flex flex-col items-center text-[10px] font-bold text-emerald-700">
+                    <span class="text-base">🖥</span>
+                    <span>POS</span>
+                </a>
+            @else
+                <form method="POST" action="{{ route('logout') }}" class="inline">
+                    @csrf
+                    <button class="flex flex-col items-center text-[10px] text-slate-400">
+                        <span class="text-base">🚪</span>
+                        <span>Keluar</span>
+                    </button>
+                </form>
+            @endif
+        @else
+            <a href="{{ route('login') }}" class="flex flex-col items-center text-[10px] {{ request()->routeIs('login') ? 'font-black text-[#0d131a]' : 'text-slate-400' }}">
+                <span class="text-base">👤</span>
+                <span>Masuk</span>
+            </a>
+        @endauth
+    </nav>
 
 </body>
 </html>
