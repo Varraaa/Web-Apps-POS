@@ -36,5 +36,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/pos/receipt/{order}', [AdminPosController::class, 'receipt'])->name('pos.receipt');
     Route::resource('products', AdminProductController::class)->except(['show']);
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
+    Route::get('/orders/{order}/packing-slip', [AdminOrderController::class, 'packingSlip'])->name('orders.packing-slip');
     Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
 });

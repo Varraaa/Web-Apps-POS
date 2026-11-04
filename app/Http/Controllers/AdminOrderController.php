@@ -77,6 +77,26 @@ class AdminOrderController extends Controller
     }
 
     /**
+     * View commercial A4 invoice.
+     */
+    public function invoice(Order $order): View
+    {
+        $order->load(['items.product', 'user']);
+
+        return view('admin.orders.invoice', compact('order'));
+    }
+
+    /**
+     * View warehouse packing slip / shipping label.
+     */
+    public function packingSlip(Order $order): View
+    {
+        $order->load(['items.product', 'user']);
+
+        return view('admin.orders.packing-slip', compact('order'));
+    }
+
+    /**
      * Update order status.
      */
     public function update(Request $request, Order $order): RedirectResponse
