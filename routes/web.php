@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminOrderController;
+use App\Http\Controllers\AdminPosController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -30,6 +31,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/pos', [AdminPosController::class, 'index'])->name('pos.index');
+    Route::post('/pos/checkout', [AdminPosController::class, 'checkout'])->name('pos.checkout');
+    Route::get('/pos/receipt/{order}', [AdminPosController::class, 'receipt'])->name('pos.receipt');
     Route::resource('products', AdminProductController::class)->except(['show']);
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
