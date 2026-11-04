@@ -21,6 +21,7 @@ Route::middleware('buyer')->group(function (): void {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::get('/tracking', [OrderTrackingController::class, 'index'])->name('tracking.index');
     Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
+    Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{product}', [CartController::class, 'remove'])->name('cart.remove');
     Route::post('/cart/coupon/apply', [CartController::class, 'applyCoupon'])->name('cart.coupon.apply');
     Route::delete('/cart/coupon/remove', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');

@@ -64,10 +64,37 @@
                             </p>
                         </div>
 
-                        <div class="flex items-end justify-between mt-4 pt-3 border-t border-[#f4f2ee]">
-                            <span class="text-xs text-[#64748b]">
-                                Jumlah: <strong class="text-[#0d131a]">{{ $item['quantity'] }} pcs</strong>
-                            </span>
+                        <div class="flex items-center justify-between mt-4 pt-3 border-t border-[#f4f2ee]">
+                            <!-- Quantity Adjust Stepper -->
+                            <div class="flex items-center gap-2">
+                                <form method="POST" action="{{ route('cart.update', $item['product']) }}" class="inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="quantity" value="{{ $item['quantity'] - 1 }}">
+                                    <button type="submit" class="w-7 h-7 rounded border border-[#d4cdbf] bg-[#fbfaf8] hover:bg-[#0d131a] hover:text-white text-xs font-bold transition-colors flex items-center justify-center">
+                                        −
+                                    </button>
+                                </form>
+
+                                <span class="w-8 text-center text-xs font-black text-[#0d131a]">
+                                    {{ $item['quantity'] }}
+                                </span>
+
+                                <form method="POST" action="{{ route('cart.update', $item['product']) }}" class="inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="quantity" value="{{ $item['quantity'] + 1 }}">
+                                    <button type="submit" 
+                                            class="w-7 h-7 rounded border border-[#d4cdbf] bg-[#fbfaf8] hover:bg-[#0d131a] hover:text-white text-xs font-bold transition-colors flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none"
+                                            {{ $item['quantity'] >= $item['product']->stock ? 'disabled' : '' }}>
+                                        +
+                                    </button>
+                                </form>
+
+                                <span class="text-[10px] text-[#94a3b8] ml-1">
+                                    (stok: {{ $item['product']->stock }})
+                                </span>
+                            </div>
 
                             <div class="text-right">
                                 @if($item['product']->has_discount)

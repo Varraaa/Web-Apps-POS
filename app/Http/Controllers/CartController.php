@@ -47,6 +47,27 @@ class CartController extends Controller
         return back()->with('success', 'Produk dihapus dari tas.');
     }
 
+    public function update(Request $request, Product $product): RedirectResponse
+    {
+        $quantity = $request->integer('quantity', 1);
+        $cart = $request->session()->get('cart', []);
+
+        if ($quantity <= 0) {
+            unset($cart[$product->id]);
+            $request->session()->put('cart', $cart);
+
+            return back()->with('success', 'Produk dihapus dari tas.');
+        }
+
+        $cart[$product->id] = [
+            'product_id' => $product->id,
+            'quantity' => min(max($quantity, 1), $product->stock),
+        ];
+        $request->session()->put('cart', $cart);
+
+        return back()->with('success', 'Kuantitas barang diperbarui.');
+    }
+
     public function applyCoupon(Request $request): RedirectResponse
     {
         $code = trim((string) $request->input('code'));
