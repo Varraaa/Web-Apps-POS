@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminDiscountController;
 use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminPosController;
 use App\Http\Controllers\AdminProductController;
@@ -35,6 +36,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/pos/checkout', [AdminPosController::class, 'checkout'])->name('pos.checkout');
     Route::get('/pos/receipt/{order}', [AdminPosController::class, 'receipt'])->name('pos.receipt');
     Route::resource('products', AdminProductController::class)->except(['show']);
+    Route::resource('discounts', AdminDiscountController::class)->except(['show']);
+    Route::patch('/discounts/{discount}/toggle', [AdminDiscountController::class, 'toggle'])->name('discounts.toggle');
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::get('/orders/{order}/packing-slip', [AdminOrderController::class, 'packingSlip'])->name('orders.packing-slip');
