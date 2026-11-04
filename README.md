@@ -1,58 +1,124 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Web-Apps-POS (VarStore Atelier)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Web-Apps-POS** adalah aplikasi modern Point of Sale (POS) dan e-commerce fashion boutique yang dibangun menggunakan **Laravel 13**, **Tailwind CSS v4**, dan **Alpine/Vanilla JS**. Dirancang dengan fokus pada efisiensi operasional kasir, integritas data inventaris secara real-time, serta pengalaman belanja pelanggan yang intuitif dan profesional tanpa *AI Slop*.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🌟 Fitur Utama Sistem
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 1. 🖥️ Terminal Kasir POS Interaktif (`/admin/pos`)
+* **Pencarian Cepat & Filter Kategori:** Cari produk berdasarkan nama, kode warna, atau scan barcode dengan respon instan.
+* **Shortcut Keyboard Kasir:**
+  * `[F2]` : Fokus ke pencarian produk.
+  * `[F4]` : Buka modal konfirmasi pembayaran.
+  * `[ESC]` : Tutup dialog / batalkan transaksi.
+* **Kalkulator Uang & Kembalian Real-time:** Pilihan pembayaran Tunai (*Cash*) dengan tombol pecahan uang cepat (*Uang Pas*, Rp 50.000, Rp 100.000, Rp 200.000, Rp 500.000) dan kalkulasi otomatis kembalian.
+* **Multi-Metode Pembayaran:** Mendukung Uang Tunai, QRIS Dinamis Standar Nasional, dan Transfer Bank (BCA & Mandiri).
+* **Pengurangan Stok Otomatis:** Pemotongan stok barang secara atomik (*database transaction*) mencegah terjadinya *overselling*.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 2. 🖨️ Struk Kasir Thermal & Faktur Komersial Resmi
+* **Struk Thermal Kasir (58mm / 80mm):** Format struk POS kasir dengan barcode simulation, rincian produk, nomor invoice unik, kasir penanggung jawab, dan ketentuan penukaran barang.
+* **Faktur Pajak / Invoice Komersial A4 (`/admin/orders/{id}/invoice`):** Lembar tagihan resmi A4 dengan kop surat butik, tabel rincian transaksi, dan kolom tanda tangan pengesahan.
+* **Packing Slip Gudang (`/admin/orders/{id}/packing-slip`):** Lembar verifikasi pengemasan pesanan untuk logistik dan kurir pengiriman.
 
-## Learning Laravel
+### 3. 📦 Manajemen Pesanan & Transaksi (`/admin/orders`)
+* **Filter Komprehensif:** Filter pesanan berdasarkan status (*Menunggu*, *Diproses*, *Selesai*, *Dibatalkan*) dan kanal transaksi (*🏬 POS Kasir* vs *🌐 Online WA*).
+* **Modal Detail Transaksi:** Tampilan pop-up instan berisi rincian item, catatan kasir, alamat pengiriman, dan tautan langsung WhatsApp pelanggan.
+* **Pembaruan Status Cepat:** Ubah status pesanan secara langsung melalui tabel administrasi.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 4. 🏷️ Manajemen Voucher & Kupon Promosi (`/admin/discounts`)
+* **Tipe Potongan Fleksibel:** Mendukung persentase (`%`) maupun nominal tetap (`Rp`).
+* **Pembatas Transaksi:** Pengaturan batas minimal belanja (*min spend*) dan batas maksimal diskon (*max discount*).
+* **Masa Berlaku & Status Aktif:** Jadwal kadaluarsa kupon serta tombol *toggle* aktif/nonaktif dalam 1-klik.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 5. 👗 Manajemen Katalog & Inventaris (`/admin/products`)
+* **Kalkulator Diskon & Harga Jual:** Menghitung potongan dan harga jual akhir secara live saat mengisi formulir.
+* **Live Image Preview:** Validasi visual gambar produk secara langsung saat URL dimasukkan.
+* **Peringatan Stok Rendah:** Notifikasi visual produk yang stoknya menipis (≤ 5 pcs) untuk mempermudah restock.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### 6. 🔍 Pelacakan Pesanan Pelanggan (`/tracking`)
+* Portal publik bagi pembeli untuk melacak status pesanan menggunakan Nomor Invoice (`#POS-XXXX` / `#INV-XXXX`) atau Nomor WhatsApp.
+* Dilengkapi *stepper* 3 tahap pemrosesan (*Pesanan Diterima* → *Diproses Kasir* → *Selesai & Dikirim*).
 
-## Agentic Development
+### 7. 🛍️ Storefront Modern & Navigasi Mobile
+* Desain butik minimalis dengan responsivitas tinggi pada perangkat *desktop*, *tablet*, maupun *smartphone*.
+* **Mobile Bottom Bar:** Navigasi bawah untuk akses cepat ke Beranda, Koleksi, Lacak Pesanan, Tas Belanja, dan Terminal POS.
+* **Checkout WhatsApp Concierge:** Sinkronisasi tas belanja langsung ke pesan WhatsApp kurator toko.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+---
+
+## 🛠️ Stack Teknologi
+
+* **Backend:** PHP 8.5+ & Laravel 13
+* **Frontend:** Blade Templating, Tailwind CSS v4, JavaScript (ES6+)
+* **Database:** SQLite (Testing / Dev) & MySQL / MariaDB (Production)
+* **Code Formatter:** Laravel Pint (PSR-12 Standard)
+* **Testing:** PHPUnit 12
+
+---
+
+## 🚀 Panduan Instalasi Lokal
+
+1. **Clone Repositori:**
+   ```bash
+   git clone https://github.com/Varraaa/Web-Apps-POS.git
+   cd Web-Apps-POS
+   ```
+
+2. **Pasang Dependensi PHP & JavaScript:**
+   ```bash
+   composer install
+   npm install
+   ```
+
+3. **Konfigurasi Environment:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+4. **Jalankan Migrasi & Seeder Database:**
+   ```bash
+   php artisan migrate --seed
+   ```
+
+5. **Jalankan Aplikasi:**
+   ```bash
+   # Jalankan asset bundling
+   npm run build # atau npm run dev
+
+   # Jalankan server lokal Laravel
+   php artisan serve
+   ```
+
+Aplikasi dapat diakses melalui peramban di `http://localhost:8000`.
+
+---
+
+## 🔑 Kredensial Demo Akun
+
+* **Administrator / Kasir:**
+  * **Email:** `admin@varstore`
+  * **Password:** `password`
+  * **Akses:** Terminal Kasir POS, Manajemen Produk, Pesanan, dan Voucher Diskon.
+
+* **Pelanggan Demo:**
+  * **Email:** `test@example.com`
+  * **Password:** `password`
+  * **Akses:** Belanja Koleksi, Tas Belanja, dan Pelacakan Pesanan.
+
+---
+
+## 🧪 Menjalankan Pengujian (Tests)
+
+Uji fungsionalitas modul POS, keranjang, otentikasi, dan voucher:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+php artisan test
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 📄 Lisensi
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Proyek ini dilisensikan di bawah lisensi open-source [MIT License](LICENSE).
