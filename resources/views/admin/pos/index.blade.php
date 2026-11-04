@@ -1,0 +1,304 @@
+@extends('layouts.admin')
+@section('title', 'POS Kasir Terminal — VarStore')
+
+@section('content')
+<div class="pos-container" id="pos-app">
+    <!-- Top POS Toolbar -->
+    <div class="pos-topbar">
+        <div class="flex items-center gap-3">
+            <span class="pos-status-pulse"></span>
+            <div>
+                <h1 class="pos-title">Terminal Kasir POS</h1>
+                <p class="pos-subtitle">Shift Aktif: <strong class="text-slate-800">{{ auth()->user()->name ?? 'Kasir Utama' }}</strong> · <span id="pos-live-clock">--:--:--</span></p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="pos-shift-stat">
+                <small>Penjualan POS Hari Ini</small>
+                <strong>Rp {{ number_format($todaySales, 0, ',', '.') }}</strong>
+                <span class="text-[10px] text-emerald-600 font-semibold">{{ $todayCount }} Transaksi</span>
+            </div>
+            <a href="{{ route('admin.orders.index') }}" class="pos-btn-ghost text-xs">
+                <span>Riwayat Transaksi ↗</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Register Workspace (2 Columns) -->
+    <div class="pos-grid">
+        <!-- Left: Product Catalog & Search (7 Cols) -->
+        <section class="pos-catalog-panel">
+            <!-- Filter & Search Toolbar -->
+            <div class="pos-search-bar">
+                <div class="relative flex-1">
+                    <input type="text" id="pos-search-input" 
+                           placeholder="Cari nama produk, warna, atau scan barcode... (F2)" 
+                           class="pos-input-search">
+                    <span class="pos-search-icon">🔍</span>
+                    <button type="button" id="pos-clear-search" class="pos-clear-btn hidden" title="Hapus pencarian">&times;</button>
+                </div>
+
+                <!-- Category Pills -->
+                <div class="pos-category-scroller">
+                    <button type="button" class="pos-cat-pill active" data-category="">Semua</button>
+                    @foreach($categories as $cat)
+                        <button type="button" class="pos-cat-pill" data-category="{{ $cat }}">{{ $cat }}</button>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Product Grid -->
+            <div class="pos-products-grid" id="pos-products-container">
+                @forelse($products as $product)
+                    <div class="pos-product-card {{ $product->stock <= 0 ? 'is-out-of-stock' : '' }}" 
+                         data-id="{{ $product->id }}"
+                         data-name="{{ $product->name }}"
+                         data-category="{{ $product->category }}"
+                         data-price="{{ $product->final_price }}"
+                         data-original-price="{{ $product->price }}"
+                         data-stock="{{ $product->stock }}"
+                         data-image="{{ $product->image_url }}"
+                         data-color="{{ $product->color ?? '-' }}"
+                         data-size="{{ $product->size ?? '-' }}"
+                         title="{{ $product->name }}">
+                        <div class="pos-product-thumb">
+                            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
+                            @if($product->has_discount)
+                                <span class="pos-discount-tag">-{{ $product->discount_percent }}%</span>
+                            @endif
+                            <span class="pos-stock-badge {{ $product->stock <= 2 ? 'is-low' : '' }}">
+                                {{ $product->stock > 0 ? $product->stock . ' stok' : 'Habis' }}
+                            </span>
+                        </div>
+                        <div class="pos-product-info">
+                            <span class="pos-product-cat">{{ $product->category }}</span>
+                            <h3 class="pos-product-name">{{ $product->name }}</h3>
+                            <div class="pos-product-pricing">
+                                <span class="pos-current-price">Rp {{ number_format($product->final_price, 0, ',', '.') }}</span>
+                                @if($product->has_discount)
+                                    <span class="pos-old-price">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="col-span-full text-center py-12 text-slate-400">
+                        Belum ada data produk di katalog.
+                    </div>
+                @endforelse
+            </div>
+        </section>
+
+        <!-- Right: Active Ticket / Cart Panel (5 Cols) -->
+        <aside class="pos-ticket-panel">
+            <div class="pos-ticket-header">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">Tiket Pesanan Kasir</h2>
+                    <span class="text-xs text-slate-500" id="pos-ticket-count">0 item dipilih</span>
+                </div>
+                <button type="button" id="pos-btn-clear-cart" class="pos-btn-danger-ghost text-xs">
+                    Kosongkan (Esc)
+                </button>
+            </div>
+
+            <!-- Customer & Notes Accordion / Inputs -->
+            <div class="pos-ticket-meta">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="pos-meta-label">Nama Pelanggan</label>
+                        <input type="text" id="pos-customer-name" value="Pelanggan Walk-In" class="pos-meta-input">
+                    </div>
+                    <div>
+                        <label class="pos-meta-label">Nomor WhatsApp / Telp</label>
+                        <input type="text" id="pos-customer-phone" placeholder="08xxxxxxxxxx" class="pos-meta-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ticket Items Scrollable List -->
+            <div class="pos-ticket-items" id="pos-ticket-items-container">
+                <div class="pos-empty-ticket" id="pos-ticket-empty">
+                    <span class="text-3xl mb-2">🛒</span>
+                    <p class="font-semibold text-slate-700 text-sm">Tiket kasir masih kosong</p>
+                    <p class="text-xs text-slate-400 mt-1">Klik item di katalog atau cari produk untuk mulai transaksi.</p>
+                </div>
+            </div>
+
+            <!-- Ticket Financial Summary & Coupon -->
+            <div class="pos-ticket-footer">
+                <!-- Promo Coupon Selector -->
+                <div class="pos-coupon-row">
+                    <div class="flex items-center gap-2">
+                        <select id="pos-coupon-select" class="pos-coupon-select">
+                            <option value="">-- Pilih Voucher Diskon --</option>
+                            @foreach($coupons as $coupon)
+                                <option value="{{ $coupon->code }}" data-type="{{ $coupon->type }}" data-value="{{ $coupon->value }}" data-min="{{ $coupon->min_spend }}" data-max="{{ $coupon->max_discount }}">
+                                    {{ $coupon->code }} ({{ $coupon->formatted_discount }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <button type="button" id="pos-apply-coupon" class="pos-btn-apply-coupon">Pasang</button>
+                    </div>
+                </div>
+
+                <div class="pos-summary-table">
+                    <div class="pos-summary-row">
+                        <span>Subtotal</span>
+                        <strong id="pos-val-subtotal">Rp 0</strong>
+                    </div>
+                    <div class="pos-summary-row text-emerald-600" id="pos-row-discount" style="display: none;">
+                        <span>Diskon (<span id="pos-discount-label">-</span>)</span>
+                        <strong id="pos-val-discount">- Rp 0</strong>
+                    </div>
+                    <div class="pos-summary-row pos-grand-total">
+                        <span>TOTAL TAGIHAN</span>
+                        <strong id="pos-val-grandtotal">Rp 0</strong>
+                    </div>
+                </div>
+
+                <!-- Pay Button -->
+                <button type="button" id="pos-btn-open-payment" class="pos-btn-pay" disabled>
+                    <span>Lanjut ke Pembayaran (F4)</span>
+                    <span class="text-lg">→</span>
+                </button>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Modal Dialog Pembayaran Kasir (Include via separate component) -->
+<div id="pos-payment-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900">Pembayaran Kasir POS</h3>
+                <p class="text-xs text-slate-500">Pilih metode pembayaran dan masukkan jumlah uang yang diterima.</p>
+            </div>
+            <button type="button" id="pos-modal-close" class="pos-modal-close-btn">&times;</button>
+        </div>
+
+        <div class="pos-modal-body">
+            <!-- Amount Due Banner -->
+            <div class="pos-due-banner">
+                <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Tagihan</span>
+                <h2 class="text-3xl font-extrabold text-slate-900" id="pos-modal-due">Rp 0</h2>
+            </div>
+
+            <!-- Payment Methods Tabs -->
+            <div class="pos-pay-tabs">
+                <button type="button" class="pos-pay-tab active" data-method="cash">💵 Uang Tunai (Cash)</button>
+                <button type="button" class="pos-pay-tab" data-method="qris">📱 QRIS Instan</button>
+                <button type="button" class="pos-pay-tab" data-method="transfer">🏦 Transfer Bank</button>
+            </div>
+
+            <!-- Tab 1: Cash Pane -->
+            <div class="pos-pay-pane" id="pane-cash">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Uang Diterima dari Pelanggan (Rp)</label>
+                <div class="relative mb-3">
+                    <span class="absolute left-3.5 top-3 text-slate-400 font-bold text-sm">Rp</span>
+                    <input type="number" id="pos-cash-input" class="pos-cash-input" placeholder="0" min="0" step="1000">
+                </div>
+
+                <!-- Quick Cash Presets -->
+                <div class="pos-quick-cash-grid">
+                    <button type="button" class="btn-cash-preset" id="preset-exact">Uang Pas</button>
+                    <button type="button" class="btn-cash-preset" data-amount="50000">50.000</button>
+                    <button type="button" class="btn-cash-preset" data-amount="100000">100.000</button>
+                    <button type="button" class="btn-cash-preset" data-amount="200000">200.000</button>
+                    <button type="button" class="btn-cash-preset" data-amount="500000">500.000</button>
+                </div>
+
+                <!-- Live Change Calculator -->
+                <div class="pos-change-box">
+                    <span class="text-xs font-bold text-slate-600">UANG KEMBALIAN</span>
+                    <strong class="text-2xl font-black text-emerald-600" id="pos-cash-change">Rp 0</strong>
+                </div>
+            </div>
+
+            <!-- Tab 2: QRIS Pane -->
+            <div class="pos-pay-pane hidden" id="pane-qris">
+                <div class="text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                    <div class="w-48 h-48 mx-auto bg-white p-3 rounded-lg shadow-sm border border-slate-200 flex flex-col items-center justify-center">
+                        <!-- Simulated QRIS Barcode Pattern -->
+                        <div class="w-full h-full border-4 border-slate-800 p-2 flex flex-col justify-between">
+                            <div class="flex justify-between">
+                                <span class="w-6 h-6 bg-slate-800 rounded-sm"></span>
+                                <span class="w-6 h-6 bg-slate-800 rounded-sm"></span>
+                            </div>
+                            <div class="text-center font-bold text-xs tracking-widest text-slate-700">QRIS STANDAR</div>
+                            <div class="flex justify-between">
+                                <span class="w-6 h-6 bg-slate-800 rounded-sm"></span>
+                                <span class="text-[10px] text-slate-500 font-mono">NMID: ID102938</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-600 font-semibold mt-3">Arahkan kamera aplikasi GoPay, OVO, BCA, atau Livin' ke kode QR</p>
+                    <span class="text-[11px] text-slate-400">Verifikasi otomatis langsung oleh terminal</span>
+                </div>
+            </div>
+
+            <!-- Tab 3: Transfer Pane -->
+            <div class="pos-pay-pane hidden" id="pane-transfer">
+                <div class="space-y-2">
+                    <div class="p-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-blue-600 uppercase">BCA Virtual Account</span>
+                            <div class="font-mono font-bold text-sm text-slate-800">8801-9283-7462</div>
+                            <small class="text-slate-500 text-[10px]">a.n VarStore Official Store</small>
+                        </div>
+                        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">Siap Pakai</span>
+                    </div>
+                    <div class="p-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-amber-600 uppercase">Bank Mandiri</span>
+                            <div class="font-mono font-bold text-sm text-slate-800">132-00-987123-4</div>
+                            <small class="text-slate-500 text-[10px]">a.n VarStore Indonesia</small>
+                        </div>
+                        <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold">Siap Pakai</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes Input -->
+            <div class="mt-4">
+                <label class="block text-xs font-bold text-slate-600 mb-1">Catatan Tambahan (Opsional)</label>
+                <input type="text" id="pos-notes-input" placeholder="e.g. Pembelian langsung di kasir toko" class="w-full text-xs p-2.5 rounded-lg border border-slate-200">
+            </div>
+        </div>
+
+        <div class="pos-modal-footer">
+            <button type="button" id="pos-cancel-pay-btn" class="pos-btn-ghost text-xs">Batal</button>
+            <button type="button" id="pos-submit-transaction-btn" class="pos-btn-pay flex-1 justify-center">
+                <span>Konfirmasi Pembayaran Selesai ✓</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Popup Modal (After Success) -->
+<div id="pos-receipt-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-sm">
+        <div class="p-4 text-center">
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-2">
+                ✓
+            </div>
+            <h3 class="text-base font-extrabold text-slate-900">Transaksi Berhasil!</h3>
+            <p class="text-xs text-slate-500" id="receipt-modal-sub">Struk pembayaran telah dicatat.</p>
+        </div>
+
+        <div class="px-6 py-4 border-y border-slate-100 bg-slate-50 text-center">
+            <iframe id="receipt-frame" src="" class="w-full h-80 border-0 rounded bg-white shadow-inner"></iframe>
+        </div>
+
+        <div class="p-4 flex gap-2">
+            <button type="button" id="btn-print-receipt" class="pos-btn-pay flex-1 justify-center text-xs">
+                🖨 Cetak Struk Kasir
+            </button>
+            <button type="button" id="btn-close-receipt-modal" class="pos-btn-ghost text-xs">
+                Tutup (Esc)
+            </button>
+        </div>
+    </div>
+</div>
+@endsection
