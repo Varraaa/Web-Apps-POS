@@ -11,11 +11,28 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'category', 'description', 'price', 'discount_percent', 'stock', 'size', 'color', 'image_url', 'is_featured'];
+    protected $fillable = [
+        'name',
+        'slug',
+        'category',
+        'description',
+        'price',
+        'discount_percent',
+        'stock',
+        'size',
+        'color',
+        'image_url',
+        'is_featured',
+    ];
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'discount_percent' => 'integer', 'is_featured' => 'boolean'];
+        return [
+            'price' => 'decimal:2',
+            'discount_percent' => 'integer',
+            'stock' => 'integer',
+            'is_featured' => 'boolean',
+        ];
     }
 
     public function getHasDiscountAttribute(): bool
@@ -39,6 +56,36 @@ class Product extends Model
         }
 
         return (float) $this->price - $this->final_price;
+    }
+
+    public function getFormattedPriceAttribute(): string
+    {
+        return 'Rp ' . number_format((float) $this->price, 0, ',', '.');
+    }
+
+    public function getFormattedFinalPriceAttribute(): string
+    {
+        return 'Rp ' . number_format($this->final_price, 0, ',', '.');
+    }
+
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->stock > 0 && $this->stock <= 5;
+    }
+
+    public function getIsOutOfStockAttribute(): bool
+    {
+        return $this->stock <= 0;
+    }
+
+    public function decreaseStock(int $quantity): void
+    {
+        $this->decrement('stock', min($quantity, $this->stock));
+    }
+
+    public function increaseStock(int $quantity): void
+    {
+        $this->increment('stock', $quantity);
     }
 
     public function orderItems(): HasMany
