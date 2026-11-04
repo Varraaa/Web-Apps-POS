@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMobileNav();
     initBackToTop();
     initToasts();
+    initPosRegister();
 });
 
 /**
@@ -207,3 +208,476 @@ window.showToast = function(message, type = 'info') {
     toast.querySelector('.toast-close').addEventListener('click', removeToast);
     setTimeout(removeToast, 4500);
 };
+
+/**
+ * Modern POS Register Terminal Controller
+ */
+function initPosRegister() {
+    const posApp = document.getElementById('pos-app');
+    if (!posApp) return;
+
+    let ticket = [];
+    let appliedCoupon = null;
+    let paymentMethod = 'cash';
+
+    // Elements
+    const searchInput = document.getElementById('pos-search-input');
+    const clearSearchBtn = document.getElementById('pos-clear-search');
+    const categoryPills = document.querySelectorAll('.pos-cat-pill');
+    const productCards = document.querySelectorAll('.pos-product-card');
+    const ticketItemsContainer = document.getElementById('pos-ticket-items-container');
+    const ticketEmptyNotice = document.getElementById('pos-ticket-empty');
+    const ticketCountLabel = document.getElementById('pos-ticket-count');
+    const clearCartBtn = document.getElementById('pos-btn-clear-cart');
+
+    const couponSelect = document.getElementById('pos-coupon-select');
+    const applyCouponBtn = document.getElementById('pos-apply-coupon');
+
+    const subtotalDisplay = document.getElementById('pos-val-subtotal');
+    const discountRow = document.getElementById('pos-row-discount');
+    const discountLabel = document.getElementById('pos-discount-label');
+    const discountDisplay = document.getElementById('pos-val-discount');
+    const grandtotalDisplay = document.getElementById('pos-val-grandtotal');
+    const payBtn = document.getElementById('pos-btn-open-payment');
+
+    // Modals
+    const paymentModal = document.getElementById('pos-payment-modal');
+    const modalCloseBtn = document.getElementById('pos-modal-close');
+    const modalDueAmount = document.getElementById('pos-modal-due');
+    const payTabs = document.querySelectorAll('.pos-pay-tab');
+    const payPanes = {
+        cash: document.getElementById('pane-cash'),
+        qris: document.getElementById('pane-qris'),
+        transfer: document.getElementById('pane-transfer'),
+    };
+    const cashInput = document.getElementById('pos-cash-input');
+    const cashChangeDisplay = document.getElementById('pos-cash-change');
+    const cancelPayBtn = document.getElementById('pos-cancel-pay-btn');
+    const submitTransactionBtn = document.getElementById('pos-submit-transaction-btn');
+
+    const receiptModal = document.getElementById('pos-receipt-modal');
+    const receiptFrame = document.getElementById('receipt-frame');
+    const printReceiptBtn = document.getElementById('btn-print-receipt');
+    const closeReceiptBtn = document.getElementById('btn-close-receipt-modal');
+
+    // Live Clock
+    const clockElement = document.getElementById('pos-live-clock');
+    if (clockElement) {
+        const updateClock = () => {
+            const now = new Date();
+            clockElement.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        };
+        updateClock();
+        setInterval(updateClock, 1000);
+    }
+
+    // Number formatter
+    const formatRp = (num) => 'Rp ' + Number(num).toLocaleString('id-ID');
+
+    // Calculations
+    const calculateTotals = () => {
+        const subtotal = ticket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        let discount = 0;
+
+        if (appliedCoupon) {
+            if (subtotal < appliedCoupon.min_spend) {
+                appliedCoupon = null;
+                if (window.showToast) {
+                    window.showToast('Voucher dibatalkan karena subtotal di bawah minimum belanja.', 'error');
+                }
+            } else {
+                if (appliedCoupon.type === 'percent') {
+                    discount = Math.round((appliedCoupon.value / 100) * subtotal);
+                    if (appliedCoupon.max_discount && discount > appliedCoupon.max_discount) {
+                        discount = appliedCoupon.max_discount;
+                    }
+                } else {
+                    discount = Math.min(appliedCoupon.value, subtotal);
+                }
+            }
+        }
+
+        const grandTotal = Math.max(0, subtotal - discount);
+
+        // Update UI
+        subtotalDisplay.textContent = formatRp(subtotal);
+        if (discount > 0 && appliedCoupon) {
+            discountRow.style.display = 'flex';
+            discountLabel.textContent = appliedCoupon.code;
+            discountDisplay.textContent = '- ' + formatRp(discount);
+        } else {
+            discountRow.style.display = 'none';
+        }
+
+        grandtotalDisplay.textContent = formatRp(grandTotal);
+
+        const totalQty = ticket.reduce((sum, item) => sum + item.quantity, 0);
+        ticketCountLabel.textContent = `${totalQty} item dipilih`;
+        payBtn.disabled = ticket.length === 0;
+
+        return { subtotal, discount, grandTotal };
+    };
+
+    // Render Ticket items
+    const renderTicket = () => {
+        if (ticket.length === 0) {
+            ticketEmptyNotice.classList.remove('hidden');
+            ticketItemsContainer.innerHTML = '';
+            ticketItemsContainer.appendChild(ticketEmptyNotice);
+        } else {
+            ticketEmptyNotice.classList.add('hidden');
+            ticketItemsContainer.innerHTML = '';
+
+            ticket.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'ticket-item-row';
+                row.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}" class="ticket-item-thumb">
+                    <div class="ticket-item-info">
+                        <h4 class="ticket-item-title" title="${item.name}">${item.name}</h4>
+                        <span class="ticket-item-meta">${item.color} · ${formatRp(item.price)}</span>
+                    </div>
+                    <div class="ticket-qty-control">
+                        <button type="button" class="ticket-qty-btn btn-dec" data-id="${item.id}">−</button>
+                        <span class="ticket-qty-val">${item.quantity}</span>
+                        <button type="button" class="ticket-qty-btn btn-inc" data-id="${item.id}" ${item.quantity >= item.stock ? 'disabled' : ''}>+</button>
+                    </div>
+                    <span class="ticket-item-subtotal">${formatRp(item.price * item.quantity)}</span>
+                    <button type="button" class="ticket-del-btn" data-id="${item.id}" title="Hapus">✕</button>
+                `;
+
+                // Events
+                row.querySelector('.btn-dec').addEventListener('click', () => {
+                    if (item.quantity > 1) {
+                        item.quantity--;
+                    } else {
+                        ticket = ticket.filter(t => t.id !== item.id);
+                    }
+                    renderTicket();
+                    calculateTotals();
+                });
+
+                row.querySelector('.btn-inc').addEventListener('click', () => {
+                    if (item.quantity < item.stock) {
+                        item.quantity++;
+                        renderTicket();
+                        calculateTotals();
+                    } else if (window.showToast) {
+                        window.showToast(`Batas stok tercapai (${item.stock} item).`, 'info');
+                    }
+                });
+
+                row.querySelector('.ticket-del-btn').addEventListener('click', () => {
+                    ticket = ticket.filter(t => t.id !== item.id);
+                    renderTicket();
+                    calculateTotals();
+                });
+
+                ticketItemsContainer.appendChild(row);
+            });
+        }
+
+        calculateTotals();
+    };
+
+    // Add product to ticket
+    productCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const id = parseInt(card.dataset.id, 10);
+            const stock = parseInt(card.dataset.stock, 10);
+            if (stock <= 0) return;
+
+            const existing = ticket.find(t => t.id === id);
+            if (existing) {
+                if (existing.quantity < stock) {
+                    existing.quantity++;
+                } else if (window.showToast) {
+                    window.showToast(`Stok produk "${card.dataset.name}" maksimal ${stock} item.`, 'info');
+                    return;
+                }
+            } else {
+                ticket.push({
+                    id: id,
+                    name: card.dataset.name,
+                    category: card.dataset.category,
+                    price: parseFloat(card.dataset.price),
+                    originalPrice: parseFloat(card.dataset.originalPrice),
+                    stock: stock,
+                    image: card.dataset.image,
+                    color: card.dataset.color,
+                    size: card.dataset.size,
+                    quantity: 1
+                });
+            }
+
+            renderTicket();
+
+            // Subtle click animation
+            card.classList.add('ring-2', 'ring-slate-900');
+            setTimeout(() => card.classList.remove('ring-2', 'ring-slate-900'), 200);
+        });
+    });
+
+    // Clear Ticket
+    clearCartBtn?.addEventListener('click', () => {
+        if (ticket.length === 0) return;
+        if (confirm('Kosongkan semua item di tiket kasir saat ini?')) {
+            ticket = [];
+            appliedCoupon = null;
+            renderTicket();
+        }
+    });
+
+    // Apply Coupon
+    applyCouponBtn?.addEventListener('click', () => {
+        const selectedCode = couponSelect.value;
+        if (!selectedCode) {
+            appliedCoupon = null;
+            calculateTotals();
+            if (window.showToast) window.showToast('Voucher dihapus.', 'info');
+            return;
+        }
+
+        const opt = couponSelect.selectedOptions[0];
+        const minSpend = parseFloat(opt.dataset.min || 0);
+        const subtotal = ticket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        if (subtotal < minSpend) {
+            if (window.showToast) {
+                window.showToast(`Minimal belanja untuk voucher ini adalah ${formatRp(minSpend)}.`, 'error');
+            }
+            return;
+        }
+
+        appliedCoupon = {
+            code: selectedCode,
+            type: opt.dataset.type,
+            value: parseFloat(opt.dataset.value),
+            min_spend: minSpend,
+            max_discount: parseFloat(opt.dataset.max || 0)
+        };
+
+        calculateTotals();
+        if (window.showToast) {
+            window.showToast(`Voucher ${selectedCode} berhasil dipasang!`, 'success');
+        }
+    });
+
+    // Search and Category Filter
+    let activeCategory = '';
+    const filterProducts = () => {
+        const query = searchInput.value.toLowerCase().trim();
+        clearSearchBtn.classList.toggle('hidden', query === '');
+
+        productCards.forEach(card => {
+            const name = card.dataset.name.toLowerCase();
+            const color = card.dataset.color.toLowerCase();
+            const cat = card.dataset.category;
+
+            const matchesQuery = query === '' || name.includes(query) || color.includes(query);
+            const matchesCat = activeCategory === '' || cat === activeCategory;
+
+            card.style.display = (matchesQuery && matchesCat) ? 'flex' : 'none';
+        });
+    };
+
+    searchInput?.addEventListener('input', filterProducts);
+    clearSearchBtn?.addEventListener('click', () => {
+        searchInput.value = '';
+        filterProducts();
+        searchInput.focus();
+    });
+
+    categoryPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            categoryPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            activeCategory = pill.dataset.category;
+            filterProducts();
+        });
+    });
+
+    // Payment Modal & Change Calculation
+    const updateChangeCalculation = () => {
+        const { grandTotal } = calculateTotals();
+        const paid = parseFloat(cashInput.value) || 0;
+        const change = Math.max(0, paid - grandTotal);
+
+        cashChangeDisplay.textContent = formatRp(change);
+        if (paid < grandTotal && paymentMethod === 'cash') {
+            cashChangeDisplay.classList.remove('text-emerald-600');
+            cashChangeDisplay.classList.add('text-rose-600');
+            submitTransactionBtn.disabled = true;
+            submitTransactionBtn.innerHTML = `<span>Uang Masih Kurang (${formatRp(grandTotal - paid)})</span>`;
+        } else {
+            cashChangeDisplay.classList.remove('text-rose-600');
+            cashChangeDisplay.classList.add('text-emerald-600');
+            submitTransactionBtn.disabled = false;
+            submitTransactionBtn.innerHTML = `<span>Konfirmasi Pembayaran Selesai ✓</span>`;
+        }
+    };
+
+    cashInput?.addEventListener('input', updateChangeCalculation);
+
+    // Quick cash presets
+    document.querySelectorAll('.btn-cash-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const { grandTotal } = calculateTotals();
+            if (btn.id === 'preset-exact') {
+                cashInput.value = grandTotal;
+            } else {
+                cashInput.value = btn.dataset.amount;
+            }
+            updateChangeCalculation();
+        });
+    });
+
+    // Payment method tabs
+    payTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            payTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            paymentMethod = tab.dataset.method;
+
+            Object.keys(payPanes).forEach(k => {
+                if (payPanes[k]) {
+                    payPanes[k].classList.toggle('hidden', k !== paymentMethod);
+                }
+            });
+
+            if (paymentMethod !== 'cash') {
+                const { grandTotal } = calculateTotals();
+                cashInput.value = grandTotal;
+                submitTransactionBtn.disabled = false;
+                submitTransactionBtn.innerHTML = `<span>Konfirmasi Pembayaran Selesai ✓</span>`;
+            } else {
+                updateChangeCalculation();
+            }
+        });
+    });
+
+    // Open Payment Modal
+    payBtn?.addEventListener('click', () => {
+        if (ticket.length === 0) return;
+        const { grandTotal } = calculateTotals();
+        modalDueAmount.textContent = formatRp(grandTotal);
+        cashInput.value = grandTotal;
+        paymentModal.classList.remove('hidden');
+        updateChangeCalculation();
+        setTimeout(() => cashInput.focus(), 100);
+    });
+
+    const closePaymentModal = () => {
+        paymentModal.classList.add('hidden');
+    };
+
+    modalCloseBtn?.addEventListener('click', closePaymentModal);
+    cancelPayBtn?.addEventListener('click', closePaymentModal);
+
+    // Submit Transaction
+    submitTransactionBtn?.addEventListener('click', async () => {
+        if (ticket.length === 0) return;
+        const { grandTotal } = calculateTotals();
+        const paid = parseFloat(cashInput.value) || grandTotal;
+
+        if (paymentMethod === 'cash' && paid < grandTotal) {
+            alert('Uang yang dibayarkan kurang dari total tagihan.');
+            return;
+        }
+
+        const customerName = document.getElementById('pos-customer-name')?.value || 'Pelanggan Walk-In';
+        const customerPhone = document.getElementById('pos-customer-phone')?.value || '-';
+        const notes = document.getElementById('pos-notes-input')?.value || '';
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                          document.querySelector('input[name="_token"]')?.value;
+
+        submitTransactionBtn.disabled = true;
+        submitTransactionBtn.innerHTML = `<span>Memproses Transaksi...</span>`;
+
+        try {
+            const response = await fetch('/admin/pos/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify({
+                    customer_name: customerName,
+                    customer_phone: customerPhone,
+                    payment_method: paymentMethod,
+                    amount_paid: paid,
+                    coupon_code: appliedCoupon?.code || null,
+                    notes: notes,
+                    items: ticket.map(t => ({
+                        product_id: t.id,
+                        quantity: t.quantity
+                    }))
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Gagal memproses transaksi.');
+            }
+
+            // Close payment modal
+            closePaymentModal();
+
+            // Open Receipt Modal
+            receiptFrame.src = result.receipt_url;
+            document.getElementById('receipt-modal-sub').textContent = `No. Struk: ${result.invoice_number}`;
+            receiptModal.classList.remove('hidden');
+
+            if (window.showToast) {
+                window.showToast(`Transaksi POS #${result.invoice_number} Sukses!`, 'success');
+            }
+
+            // Reset Ticket
+            ticket = [];
+            appliedCoupon = null;
+            document.getElementById('pos-notes-input').value = '';
+            renderTicket();
+
+        } catch (err) {
+            alert(err.message || 'Terjadi kesalahan sistem saat memproses transaksi.');
+            submitTransactionBtn.disabled = false;
+            submitTransactionBtn.innerHTML = `<span>Konfirmasi Pembayaran Selesai ✓</span>`;
+        }
+    });
+
+    // Close Receipt Modal
+    closeReceiptBtn?.addEventListener('click', () => {
+        receiptModal.classList.add('hidden');
+        receiptFrame.src = '';
+    });
+
+    // Print Receipt
+    printReceiptBtn?.addEventListener('click', () => {
+        if (receiptFrame && receiptFrame.contentWindow) {
+            receiptFrame.contentWindow.focus();
+            receiptFrame.contentWindow.print();
+        }
+    });
+
+    // Global Keyboard Shortcuts (F2 search, F4 pay, ESC close)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F2') {
+            e.preventDefault();
+            searchInput?.focus();
+        } else if (e.key === 'F4') {
+            e.preventDefault();
+            if (!payBtn.disabled && paymentModal.classList.contains('hidden')) {
+                payBtn.click();
+            }
+        } else if (e.key === 'Escape') {
+            if (!paymentModal.classList.contains('hidden')) {
+                closePaymentModal();
+            } else if (!receiptModal.classList.contains('hidden')) {
+                receiptModal.classList.add('hidden');
+            }
+        }
+    });
+}
+
