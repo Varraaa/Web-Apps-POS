@@ -14,6 +14,33 @@
         </div>
 
         <div class="flex items-center gap-4">
+            <!-- Shift Status Widget -->
+            <div id="pos-shift-widget">
+                @if($currentShift)
+                    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs" id="pos-shift-active-box">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <div>
+                            <span class="font-bold text-emerald-900 block leading-tight">{{ $currentShift->cashier_name }}</span>
+                            <span class="text-emerald-700 block text-[10px]">Modal: Rp {{ number_format($currentShift->starting_cash, 0, ',', '.') }}</span>
+                        </div>
+                        <button type="button" id="pos-btn-trigger-close-shift" class="ml-2 px-2.5 py-1 bg-emerald-700 text-white font-semibold rounded text-[11px] hover:bg-emerald-800 transition">
+                            Tutup Shift / Z-Report
+                        </button>
+                    </div>
+                @else
+                    <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg text-xs" id="pos-shift-inactive-box">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <div>
+                            <span class="font-bold text-amber-900 block leading-tight">Shift Belum Dibuka</span>
+                            <span class="text-amber-700 block text-[10px]">Input modal kas awal</span>
+                        </div>
+                        <button type="button" id="pos-btn-trigger-open-shift" class="ml-2 px-2.5 py-1 bg-amber-600 text-white font-semibold rounded text-[11px] hover:bg-amber-700 transition">
+                            Buka Kasir
+                        </button>
+                    </div>
+                @endif
+            </div>
+
             <div class="pos-shift-stat">
                 <small>Penjualan POS Hari Ini</small>
                 <strong>Rp {{ number_format($todaySales, 0, ',', '.') }}</strong>
@@ -411,4 +438,103 @@
         </div>
     </div>
 </div>
+<!-- Open Shift Modal -->
+<div id="pos-open-shift-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-sm">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900">Buka Shift Kasir Baru</h3>
+                <p class="text-xs text-slate-500">Mulai sesi register dan catat uang modal kasir.</p>
+            </div>
+            <button type="button" id="pos-close-open-shift-modal" class="pos-modal-close-btn">&times;</button>
+        </div>
+
+        <form id="pos-open-shift-form" class="pos-modal-body space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Kasir Bertugas</label>
+                <input type="text" id="open-shift-cashier-name" class="pos-input-field text-xs" 
+                       value="{{ auth()->user()->name ?? 'Kasir VarStore' }}" required>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Modal Awal Kas di Laci (Rp)</label>
+                <input type="number" id="open-shift-starting-cash" class="pos-input-field text-xs font-mono font-bold" 
+                       value="200000" min="0" step="10000" required>
+                <small class="text-[10px] text-slate-500">Uang kembalian pecahan kecil yang ada di laci kasir.</small>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Shift (Opsional)</label>
+                <input type="text" id="open-shift-notes" class="pos-input-field text-xs" placeholder="Contoh: Shift Pagi / Buka Toko">
+            </div>
+
+            <div class="pos-modal-footer pt-3">
+                <button type="submit" id="btn-submit-open-shift" class="pos-btn-pay w-full justify-center text-xs">
+                    Buka Kasir Sekarang ✓
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Close Shift Settlement Modal -->
+<div id="pos-close-shift-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-md">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900">Tutup Shift Kasir & Settlement</h3>
+                <p class="text-xs text-slate-500">Hitung uang fisik laci kasir dan cetak laporan Z-Report.</p>
+            </div>
+            <button type="button" id="pos-close-close-shift-modal" class="pos-modal-close-btn">&times;</button>
+        </div>
+
+        <form id="pos-close-shift-form" class="pos-modal-body space-y-3">
+            <!-- Settlement Summary Card -->
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Kasir:</span>
+                    <strong id="close-shift-cashier" class="text-slate-900 font-bold">-</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Waktu Buka Shift:</span>
+                    <span id="close-shift-opened-at" class="text-slate-700">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Modal Awal:</span>
+                    <span id="close-shift-starting-cash" class="font-mono text-slate-800">Rp 0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Penjualan Tunai:</span>
+                    <span id="close-shift-cash-sales" class="font-mono text-emerald-600 font-semibold">+Rp 0</span>
+                </div>
+                <div class="flex justify-between border-t border-slate-200 pt-1.5 font-bold">
+                    <span class="text-slate-800">Uang Seharusnya di Laci:</span>
+                    <span id="close-shift-expected-cash" class="font-mono text-slate-900">Rp 0</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Hitung Uang Fisik di Laci Kasir (Rp)</label>
+                <input type="number" id="close-shift-actual-cash" class="pos-input-field text-sm font-mono font-bold" 
+                       placeholder="Masukkan total uang cash yang dihitung" min="0" required>
+            </div>
+
+            <!-- Real-time Variance Box -->
+            <div id="close-shift-variance-box" class="p-2.5 rounded-lg border text-xs flex justify-between items-center bg-slate-100 border-slate-200">
+                <span class="font-bold">Selisih Kas:</span>
+                <span id="close-shift-variance-val" class="font-mono font-bold">Rp 0 (Pas)</span>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Penutupan Kasir (Opsional)</label>
+                <textarea id="close-shift-notes" class="pos-input-field text-xs h-16 resize-none" placeholder="Alasan selisih jika ada..."></textarea>
+            </div>
+
+            <div class="pos-modal-footer pt-2">
+                <button type="submit" id="btn-submit-close-shift" class="pos-btn-pay w-full justify-center text-xs">
+                    Tutup Shift & Cetak Z-Report ✓
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection

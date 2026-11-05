@@ -43,6 +43,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/pos/hold-bill', [AdminPosController::class, 'holdBill'])->name('pos.hold-bill');
     Route::post('/pos/held-bills/{heldBill}/recall', [AdminPosController::class, 'recallHeldBill'])->name('pos.held-bills.recall');
     Route::delete('/pos/held-bills/{heldBill}', [AdminPosController::class, 'deleteHeldBill'])->name('pos.held-bills.destroy');
+    Route::get('/pos/shift/current', [AdminPosController::class, 'getCurrentShift'])->name('pos.shift.current');
+    Route::post('/pos/shift/open', [AdminPosController::class, 'openShift'])->name('pos.shift.open');
+    Route::post('/pos/shift/close', [AdminPosController::class, 'closeShift'])->name('pos.shift.close');
+    Route::get('/pos/shift/{shift}/z-report', [AdminPosController::class, 'zReport'])->name('pos.shift.z-report');
     Route::get('/products/{product}/barcode-label', [AdminProductController::class, 'barcodeLabel'])->name('products.barcode-label');
     Route::resource('products', AdminProductController::class)->except(['show']);
     Route::resource('discounts', AdminDiscountController::class)->except(['show']);

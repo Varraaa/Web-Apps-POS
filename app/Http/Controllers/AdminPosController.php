@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashierShift;
 use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Order;
@@ -50,6 +51,8 @@ class AdminPosController extends Controller
             ->whereDate('created_at', now()->today())
             ->count();
 
+        $currentShift = CashierShift::active()->first();
+
         return view('admin.pos.index', compact(
             'products',
             'categories',
@@ -57,6 +60,7 @@ class AdminPosController extends Controller
             'todayOrders',
             'todaySales',
             'todayCount',
+            'currentShift',
             'search',
             'category'
         ));
@@ -315,5 +319,146 @@ class AdminPosController extends Controller
         $order->load(['items.product', 'user']);
 
         return view('admin.pos.receipt', compact('order'));
+    }
+
+    /**
+     * Get current shift status.
+     */
+    public function getCurrentShift(): JsonResponse
+    {
+        $shift = CashierShift::active()->first();
+
+        if (! $shift) {
+            return response()->json(['active' => false]);
+        }
+
+        // Calculate sales since shift opened
+        $orders = Order::where('source', 'pos')
+            ->where('created_at', '>=', $shift->opened_at)
+            ->whereIn('status', ['completed', 'processed'])
+            ->get();
+
+        $cashSales = (float) $orders->where('payment_method', 'cash')->sum('total');
+        $nonCashSales = (float) $orders->where('payment_method', '!=', 'cash')->sum('total');
+        $expectedCash = (float) ($shift->starting_cash + $cashSales);
+
+        return response()->json([
+            'active' => true,
+            'shift' => [
+                'id' => $shift->id,
+                'cashier_name' => $shift->cashier_name,
+                'opened_at' => $shift->opened_at->format('d M Y, H:i'),
+                'opened_time' => $shift->opened_at->diffForHumans(),
+                'starting_cash' => (float) $shift->starting_cash,
+                'total_cash_sales' => $cashSales,
+                'total_non_cash_sales' => $nonCashSales,
+                'total_transactions' => $orders->count(),
+                'expected_cash' => $expectedCash,
+            ],
+        ]);
+    }
+
+    /**
+     * Open a new cashier shift.
+     */
+    public function openShift(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'cashier_name' => ['required', 'string', 'max:100'],
+            'starting_cash' => ['required', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $active = CashierShift::active()->first();
+        if ($active) {
+            return response()->json([
+                'success' => false,
+                'message' => "Shift kasir atas nama {$active->cashier_name} sedang aktif. Harap tutup shift sebelumnya terlebih dahulu.",
+            ], 422);
+        }
+
+        $shift = CashierShift::create([
+            'user_id' => $request->user()?->id,
+            'cashier_name' => $validated['cashier_name'],
+            'opened_at' => now(),
+            'starting_cash' => $validated['starting_cash'],
+            'status' => 'open',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Shift kasir untuk {$shift->cashier_name} berhasil dibuka!",
+            'shift' => $shift,
+        ]);
+    }
+
+    /**
+     * Close active cashier shift and compute settlement.
+     */
+    public function closeShift(Request $request): JsonResponse
+    {
+        $shift = CashierShift::active()->first();
+        if (! $shift) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada shift kasir yang sedang aktif.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'actual_cash' => ['required', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        // Aggregate orders during this shift
+        $orders = Order::where('source', 'pos')
+            ->where('created_at', '>=', $shift->opened_at)
+            ->whereIn('status', ['completed', 'processed'])
+            ->get();
+
+        $cashSales = (float) $orders->where('payment_method', 'cash')->sum('total');
+        $nonCashSales = (float) $orders->where('payment_method', '!=', 'cash')->sum('total');
+        $expectedCash = (float) ($shift->starting_cash + $cashSales);
+        $actualCash = (float) $validated['actual_cash'];
+        $difference = $actualCash - $expectedCash;
+
+        $shift->update([
+            'closed_at' => now(),
+            'expected_cash' => $expectedCash,
+            'actual_cash' => $actualCash,
+            'difference' => $difference,
+            'total_cash_sales' => $cashSales,
+            'total_non_cash_sales' => $nonCashSales,
+            'total_transactions' => $orders->count(),
+            'status' => 'closed',
+            'notes' => $validated['notes'] ?? $shift->notes,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Shift kasir {$shift->cashier_name} berhasil ditutup. Laporan Z-Report siap dicetak.",
+            'z_report_url' => route('admin.pos.shift.z-report', $shift),
+            'shift' => $shift,
+        ]);
+    }
+
+    /**
+     * Printable Z-Report thermal closing slip.
+     */
+    public function zReport(CashierShift $shift): View
+    {
+        $orders = Order::where('source', 'pos')
+            ->where('created_at', '>=', $shift->opened_at)
+            ->when($shift->closed_at, fn ($q) => $q->where('created_at', '<=', $shift->closed_at))
+            ->whereIn('status', ['completed', 'processed'])
+            ->get();
+
+        $byPayment = $orders->groupBy('payment_method')->map(fn ($group) => [
+            'count' => $group->count(),
+            'total' => (float) $group->sum('total'),
+        ]);
+
+        return view('admin.pos.z-report', compact('shift', 'orders', 'byPayment'));
     }
 }

@@ -780,6 +780,141 @@ function initPosRegister() {
     closeHeldModal?.addEventListener('click', () => heldModal?.classList.add('hidden'));
     dismissHeldModal?.addEventListener('click', () => heldModal?.classList.add('hidden'));
 
+    // ==========================================
+    // Shift & Cash Drawer (Z-Report) Management
+    // ==========================================
+    const openShiftModal = document.getElementById('pos-open-shift-modal');
+    const closeShiftModal = document.getElementById('pos-close-shift-modal');
+    const btnTriggerOpenShift = document.getElementById('pos-btn-trigger-open-shift');
+    const btnTriggerCloseShift = document.getElementById('pos-btn-trigger-close-shift');
+    const closeOpenShiftModal = document.getElementById('pos-close-open-shift-modal');
+    const closeCloseShiftModal = document.getElementById('pos-close-close-shift-modal');
+    const openShiftForm = document.getElementById('pos-open-shift-form');
+    const closeShiftForm = document.getElementById('pos-close-shift-form');
+    const closeShiftActualInput = document.getElementById('close-shift-actual-cash');
+    const varianceBox = document.getElementById('close-shift-variance-box');
+    const varianceVal = document.getElementById('close-shift-variance-val');
+
+    let currentExpectedCash = 0;
+
+    btnTriggerOpenShift?.addEventListener('click', () => {
+        openShiftModal?.classList.remove('hidden');
+    });
+
+    closeOpenShiftModal?.addEventListener('click', () => {
+        openShiftModal?.classList.add('hidden');
+    });
+
+    openShiftForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const cashierName = document.getElementById('open-shift-cashier-name').value;
+        const startingCash = parseFloat(document.getElementById('open-shift-starting-cash').value) || 0;
+        const notes = document.getElementById('open-shift-notes').value;
+
+        try {
+            const res = await fetch('/admin/pos/shift/open', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify({
+                    cashier_name: cashierName,
+                    starting_cash: startingCash,
+                    notes: notes
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Gagal membuka shift.');
+            if (window.showToast) window.showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 600);
+        } catch (err) {
+            alert(err.message);
+        }
+    });
+
+    btnTriggerCloseShift?.addEventListener('click', async () => {
+        try {
+            const res = await fetch('/admin/pos/shift/current');
+            const data = await res.json();
+            if (!data.active) {
+                alert('Tidak ada shift aktif.');
+                return;
+            }
+            const s = data.shift;
+            document.getElementById('close-shift-cashier').textContent = s.cashier_name;
+            document.getElementById('close-shift-opened-at').textContent = `${s.opened_at} (${s.opened_time})`;
+            document.getElementById('close-shift-starting-cash').textContent = formatRp(s.starting_cash);
+            document.getElementById('close-shift-cash-sales').textContent = `+${formatRp(s.total_cash_sales)} (${s.total_transactions} tx)`;
+            document.getElementById('close-shift-expected-cash').textContent = formatRp(s.expected_cash);
+            currentExpectedCash = s.expected_cash;
+
+            closeShiftActualInput.value = '';
+            varianceVal.textContent = 'Rp 0 (Pas)';
+            varianceBox.className = 'p-2.5 rounded-lg border text-xs flex justify-between items-center bg-slate-100 border-slate-200';
+
+            closeShiftModal?.classList.remove('hidden');
+        } catch (err) {
+            alert('Gagal mengambil data shift kasir.');
+        }
+    });
+
+    closeCloseShiftModal?.addEventListener('click', () => {
+        closeShiftModal?.classList.add('hidden');
+    });
+
+    closeShiftActualInput?.addEventListener('input', () => {
+        const actual = parseFloat(closeShiftActualInput.value) || 0;
+        const diff = actual - currentExpectedCash;
+        if (diff === 0) {
+            varianceVal.textContent = 'Rp 0 (Pas ✓)';
+            varianceBox.className = 'p-2.5 rounded-lg border text-xs flex justify-between items-center bg-emerald-50 border-emerald-300 text-emerald-800';
+        } else if (diff > 0) {
+            varianceVal.textContent = `+${formatRp(diff)} (Kelebihan Uang)`;
+            varianceBox.className = 'p-2.5 rounded-lg border text-xs flex justify-between items-center bg-blue-50 border-blue-300 text-blue-800';
+        } else {
+            varianceVal.textContent = `-${formatRp(Math.abs(diff))} (Kekurangan Uang / Selisih Minus)`;
+            varianceBox.className = 'p-2.5 rounded-lg border text-xs flex justify-between items-center bg-rose-50 border-rose-300 text-rose-800 font-bold';
+        }
+    });
+
+    closeShiftForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const actualCash = parseFloat(closeShiftActualInput.value);
+        if (isNaN(actualCash) || actualCash < 0) {
+            alert('Masukkan jumlah uang fisik di laci kasir.');
+            return;
+        }
+        const notes = document.getElementById('close-shift-notes').value;
+
+        try {
+            const res = await fetch('/admin/pos/shift/close', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify({
+                    actual_cash: actualCash,
+                    notes: notes
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Gagal menutup shift.');
+
+            closeShiftModal?.classList.add('hidden');
+            window.open(data.z_report_url, '_blank', 'width=420,height=650');
+            if (window.showToast) window.showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (err) {
+            alert(err.message);
+        }
+    });
+
     // Search and Category Filter
     let activeCategory = '';
     const filterProducts = () => {
