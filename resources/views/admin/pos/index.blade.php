@@ -53,6 +53,8 @@
                 @forelse($products as $product)
                     <div class="pos-product-card {{ $product->stock <= 0 ? 'is-out-of-stock' : '' }}" 
                          data-id="{{ $product->id }}"
+                         data-sku="{{ $product->sku }}"
+                         data-barcode="{{ $product->barcode }}"
                          data-name="{{ $product->name }}"
                          data-category="{{ $product->category }}"
                          data-price="{{ $product->final_price }}"

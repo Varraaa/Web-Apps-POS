@@ -145,6 +145,10 @@
                             <!-- Actions -->
                             <td class="p-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
+                                    <a href="{{ route('admin.products.barcode-label', $product) }}" target="_blank" 
+                                       class="pos-btn-ghost text-[11px] py-1 px-2" title="Cetak Label Barcode">
+                                        🏷 Label
+                                    </a>
                                     <a href="{{ route('admin.products.edit', $product) }}" class="pos-btn-ghost text-[11px] py-1 px-2.5">
                                         Edit
                                     </a>

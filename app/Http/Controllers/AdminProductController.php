@@ -81,6 +81,14 @@ class AdminProductController extends Controller
         return back()->with('success', 'Produk berhasil dihapus.');
     }
 
+    /**
+     * Show printable clothing hangtag barcode label.
+     */
+    public function barcodeLabel(Product $product): View
+    {
+        return view('admin.products.barcode-label', compact('product'));
+    }
+
     private function validated(Request $request, ?Product $product = null): array
     {
         $validated = $request->validate([

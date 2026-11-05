@@ -1002,5 +1002,56 @@ function initPosRegister() {
             }
         }
     });
+
+    // ==========================================
+    // Hardware Barcode Scanner Listener
+    // ==========================================
+    let barcodeBuffer = '';
+    let lastKeyTime = Date.now();
+
+    window.addEventListener('keydown', (e) => {
+        const isInputField = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+        const currentTime = Date.now();
+        const diff = currentTime - lastKeyTime;
+        lastKeyTime = currentTime;
+
+        // Scanners typically send characters rapidly (< 75ms between characters)
+        if (diff > 80 && e.key !== 'Enter') {
+            barcodeBuffer = '';
+        }
+
+        if (e.key === 'Enter') {
+            if (barcodeBuffer.length >= 3) {
+                const scannedCode = barcodeBuffer.trim().toLowerCase();
+                barcodeBuffer = '';
+
+                // Try to find product by barcode, sku, or ID
+                const matchedCard = Array.from(productCards).find(card => {
+                    const barcode = (card.dataset.barcode || '').toLowerCase();
+                    const sku = (card.dataset.sku || '').toLowerCase();
+                    const id = String(card.dataset.id || '');
+                    return barcode === scannedCode || sku === scannedCode || id === scannedCode;
+                });
+
+                if (matchedCard) {
+                    e.preventDefault();
+                    if (isInputField) {
+                        document.activeElement.blur();
+                    }
+                    matchedCard.click();
+                    if (window.showToast) {
+                        window.showToast(`[Barcode Scan] Menambahkan: ${matchedCard.dataset.name}`, 'success');
+                    }
+                } else if (barcodeBuffer.length > 0) {
+                    if (window.showToast) {
+                        window.showToast(`Barcode/SKU "${scannedCode}" tidak ditemukan.`, 'info');
+                    }
+                }
+            }
+        } else if (e.key.length === 1) {
+            barcodeBuffer += e.key;
+        }
+    });
 }
+
 

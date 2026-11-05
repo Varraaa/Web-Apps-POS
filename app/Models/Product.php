@@ -14,6 +14,8 @@ class Product extends Model
     protected $fillable = [
         'name',
         'slug',
+        'sku',
+        'barcode',
         'category',
         'description',
         'price',
@@ -97,6 +99,13 @@ class Product extends Model
     {
         static::creating(function (Product $product): void {
             $product->slug = $product->slug ?: Str::slug($product->name).'-'.Str::lower(Str::random(5));
+            if (empty($product->sku)) {
+                $categoryCode = Str::upper(substr($product->category, 0, 3));
+                $product->sku = "VAR-{$categoryCode}-" . strtoupper(Str::random(4));
+            }
+            if (empty($product->barcode)) {
+                $product->barcode = '899' . mt_rand(100000000, 999999999);
+            }
         });
     }
 }
