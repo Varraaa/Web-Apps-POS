@@ -56,6 +56,10 @@
                     href="{{ route('admin.customers.index') }}">
                     <span>👥</span> Member & Pelanggan
                 </a>
+                <a class="{{ request()->routeIs('admin.reports.*') ? 'admin-nav-active' : '' }}"
+                    href="{{ route('admin.reports.index') }}">
+                    <span>📊</span> Laporan & Rekap
+                </a>
             </nav>
 
             <div class="admin-sidebar-bottom">
