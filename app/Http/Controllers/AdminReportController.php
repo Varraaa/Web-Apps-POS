@@ -54,7 +54,7 @@ class AdminReportController extends Controller
                 'order_items.product_id',
                 'order_items.product_name',
                 DB::raw('sum(order_items.quantity) as total_qty'),
-                DB::raw('sum(order_items.subtotal) as total_sales')
+                DB::raw('sum(order_items.quantity * order_items.price) as total_sales')
             )
             ->groupBy('order_items.product_id', 'order_items.product_name')
             ->orderByDesc('total_qty')
@@ -99,7 +99,7 @@ class AdminReportController extends Controller
             ->latest()
             ->get();
 
-        $filename = 'Laporan-Penjualan-' . date('Ymd-His') . '.csv';
+        $filename = 'Laporan-Penjualan-'.date('Ymd-His').'.csv';
 
         return response()->streamDownload(function () use ($orders): void {
             $handle = fopen('php://output', 'w');
@@ -163,12 +163,12 @@ class AdminReportController extends Controller
             'today' => [
                 now()->startOfDay(),
                 now()->endOfDay(),
-                'Hari Ini (' . now()->translatedFormat('d M Y') . ')',
+                'Hari Ini ('.now()->translatedFormat('d M Y').')',
             ],
             'yesterday' => [
                 now()->subDay()->startOfDay(),
                 now()->subDay()->endOfDay(),
-                'Kemarin (' . now()->subDay()->translatedFormat('d M Y') . ')',
+                'Kemarin ('.now()->subDay()->translatedFormat('d M Y').')',
             ],
             'this_week' => [
                 now()->startOfWeek(),
@@ -188,7 +188,7 @@ class AdminReportController extends Controller
             default => [
                 now()->startOfMonth(),
                 now()->endOfMonth(),
-                'Bulan Ini (' . now()->translatedFormat('F Y') . ')',
+                'Bulan Ini ('.now()->translatedFormat('F Y').')',
             ],
         };
     }

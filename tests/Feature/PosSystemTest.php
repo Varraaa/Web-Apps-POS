@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\CashierShift;
+use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Order;
+use App\Models\PosHeldBill;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -151,5 +155,216 @@ class PosSystemTest extends TestCase
         $response->assertOk();
         $response->assertSee('Citra Maharani');
         $response->assertSee('POS-20261104-TEST1');
+    }
+
+    public function test_admin_can_hold_and_recall_bill(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create(['price' => 100000, 'stock' => 10]);
+
+        $holdPayload = [
+            'customer_name' => 'Antrean 02',
+            'reference_note' => 'Menunggu fitting room',
+            'items' => [
+                [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 2,
+                    'stock' => 10,
+                ],
+            ],
+        ];
+
+        $holdResponse = $this->actingAs($admin)->postJson(route('admin.pos.hold-bill'), $holdPayload);
+        $holdResponse->assertOk();
+        $holdResponse->assertJson(['success' => true]);
+
+        $heldBill = PosHeldBill::latest()->first();
+        $this->assertNotNull($heldBill);
+        $this->assertEquals(200000, (float) $heldBill->subtotal);
+
+        // Recall bill
+        $recallResponse = $this->actingAs($admin)->postJson(route('admin.pos.held-bills.recall', $heldBill));
+        $recallResponse->assertOk();
+        $recallResponse->assertJson(['success' => true]);
+
+        $this->assertDatabaseMissing('pos_held_bills', ['id' => $heldBill->id]);
+    }
+
+    public function test_admin_can_open_and_close_cashier_shift(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Open shift
+        $openResponse = $this->actingAs($admin)->postJson(route('admin.pos.shift.open'), [
+            'cashier_name' => 'Sari Wardhani',
+            'starting_cash' => 200000,
+            'notes' => 'Shift Pagi',
+        ]);
+
+        $openResponse->assertOk();
+        $openResponse->assertJson(['success' => true]);
+
+        $shift = CashierShift::active()->first();
+        $this->assertNotNull($shift);
+        $this->assertEquals(200000, (float) $shift->starting_cash);
+
+        // Check active shift status
+        $statusResponse = $this->actingAs($admin)->getJson(route('admin.pos.shift.current'));
+        $statusResponse->assertOk();
+        $statusResponse->assertJson(['active' => true]);
+
+        // Close shift
+        $closeResponse = $this->actingAs($admin)->postJson(route('admin.pos.shift.close'), [
+            'actual_cash' => 250000,
+            'notes' => 'Tutup shift tanpa selisih',
+        ]);
+
+        $closeResponse->assertOk();
+        $closeResponse->assertJson(['success' => true]);
+
+        $shift->refresh();
+        $this->assertEquals('closed', $shift->status);
+        $this->assertEquals(250000, (float) $shift->actual_cash);
+
+        // Z-Report
+        $zReportResponse = $this->actingAs($admin)->get(route('admin.pos.shift.z-report', $shift));
+        $zReportResponse->assertOk();
+        $zReportResponse->assertSee('Z-REPORT');
+    }
+
+    public function test_customer_loyalty_points_earned_and_redeemed_in_pos(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = Customer::create([
+            'name' => 'Maya VIP',
+            'phone' => '081234567899',
+            'tier' => 'silver',
+            'points' => 50,
+            'total_spent' => 500000,
+        ]);
+
+        $product = Product::factory()->create(['price' => 100000, 'stock' => 10, 'discount_percent' => 0]);
+
+        $payload = [
+            'customer_id' => $customer->id,
+            'redeem_points' => true,
+            'payment_method' => 'qris',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)->postJson(route('admin.pos.checkout'), $payload);
+        $response->assertOk();
+
+        $order = Order::latest()->first();
+        // 50 points = Rp 5.000 discount
+        $this->assertEquals(5000, (float) $order->points_discount_amount);
+        $this->assertEquals(95000, (float) $order->total);
+
+        $customer->refresh();
+        $this->assertEquals(9, $customer->points); // 50 redeemed + 9 earned from 95.000
+    }
+
+    public function test_admin_can_adjust_product_stock_opname(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create(['stock' => 10]);
+
+        $response = $this->actingAs($admin)->post(route('admin.products.adjust-stock', $product), [
+            'type' => 'in',
+            'quantity' => 5,
+            'reason' => 'Restok 5 pcs dari suplier',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertEquals(15, $product->fresh()->stock);
+
+        $this->assertDatabaseHas('stock_adjustments', [
+            'product_id' => $product->id,
+            'type' => 'in',
+            'quantity' => 5,
+            'stock_before' => 10,
+            'stock_after' => 15,
+        ]);
+    }
+
+    public function test_wholesale_pricing_tier_applied_when_quantity_meets_minimum(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'price' => 200000,
+            'discount_percent' => 0,
+            'wholesale_min_qty' => 3,
+            'wholesale_price' => 150000,
+            'stock' => 10,
+        ]);
+
+        $payload = [
+            'customer_name' => 'Reseller Grosir',
+            'payment_method' => 'cash',
+            'amount_paid' => 500000,
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 3],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)->postJson(route('admin.pos.checkout'), $payload);
+        $response->assertOk();
+
+        $order = Order::latest()->first();
+        // 3 items * 150.000 wholesale = 450.000 (instead of 600.000)
+        $this->assertEquals(450000, (float) $order->total);
+    }
+
+    public function test_admin_can_view_reports_and_export_csv(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $indexResponse = $this->actingAs($admin)->get(route('admin.reports.index', ['period' => 'this_month']));
+        $indexResponse->assertOk();
+        $indexResponse->assertSee('Laporan Penjualan', false);
+
+        $csvResponse = $this->actingAs($admin)->get(route('admin.reports.export-csv', ['period' => 'this_month']));
+        $csvResponse->assertOk();
+        $csvResponse->assertHeader('content-type', 'text/csv; charset=UTF-8');
+    }
+
+    public function test_admin_can_update_store_settings(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)->post(route('admin.settings.update'), [
+            'store_name' => 'VARSTORE FLAGSHIP BANDUNG',
+            'store_tagline' => 'Luxury Apparel & Haute Couture',
+            'store_address' => 'Jl. Braga No. 99, Kota Bandung',
+            'store_phone' => '0812-9999-8888',
+        ]);
+
+        $response->assertRedirect();
+        $this->assertEquals('VARSTORE FLAGSHIP BANDUNG', StoreSetting::get('store_name'));
+    }
+
+    public function test_user_can_toggle_and_move_wishlist_to_cart(): void
+    {
+        $product = Product::factory()->create(['price' => 120000, 'stock' => 5]);
+
+        // Toggle add to wishlist
+        $toggleResponse = $this->post(route('wishlist.toggle', $product));
+        $toggleResponse->assertRedirect();
+        $this->assertEquals([$product->id], session('wishlist'));
+
+        // View wishlist page
+        $viewResponse = $this->get(route('wishlist.index'));
+        $viewResponse->assertOk();
+        $viewResponse->assertSee($product->name);
+
+        // Move to cart
+        $moveResponse = $this->post(route('wishlist.move-to-cart', $product));
+        $moveResponse->assertRedirect(route('cart.index'));
+        $this->assertEmpty(session('wishlist'));
+        $this->assertArrayHasKey($product->id, session('cart'));
     }
 }
