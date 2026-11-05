@@ -1,15 +1,30 @@
 @props(['product', 'delay' => 0])
 
-<article class="product-card reveal-on-scroll {{ $delay ? 'delay-' . $delay : '' }}">
-    <a href="{{ route('products.show', $product) }}" class="product-image-wrap">
-        <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
+@php
+    $inWishlist = in_array($product->id, session('wishlist', []), true);
+@endphp
+
+<article class="product-card reveal-on-scroll relative group {{ $delay ? 'delay-' . $delay : '' }}">
+    <div class="product-image-wrap relative">
+        <a href="{{ route('products.show', $product) }}" class="block w-full h-full">
+            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
+        </a>
         
         @if($product->has_discount)
             <span class="product-badge-sale">-{{ $product->discount_percent }}% OFF</span>
         @endif
 
         <span class="product-badge-category">{{ $product->category }}</span>
-    </a>
+
+        <form method="POST" action="{{ route('wishlist.toggle', $product) }}" class="btn-wishlist-form absolute top-3 right-3 z-10">
+            @csrf
+            <button type="submit" class="btn-wishlist-toggle w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-sm shadow hover:scale-110 transition {{ $inWishlist ? 'text-rose-600 font-bold bg-white' : 'text-slate-400 hover:text-rose-600' }}" 
+                    data-id="{{ $product->id }}" 
+                    title="{{ $inWishlist ? 'Hapus dari Wishlist' : 'Simpan ke Wishlist' }}">
+                {{ $inWishlist ? '♥' : '♡' }}
+            </button>
+        </form>
+    </div>
 
     <div class="product-body">
         <a href="{{ route('products.show', $product) }}" class="product-title">

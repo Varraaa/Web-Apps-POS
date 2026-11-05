@@ -12,6 +12,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('buyer')->group(function (): void {
@@ -22,6 +23,9 @@ Route::middleware('buyer')->group(function (): void {
     Route::get('/product/{product:slug}', [StoreController::class, 'show'])->name('products.show');
     Route::get('/buy/{product:slug}', [StoreController::class, 'buy'])->name('products.buy');
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist/{product}', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::post('/wishlist/{product}/move-to-cart', [WishlistController::class, 'moveToCart'])->name('wishlist.move-to-cart');
     Route::get('/tracking', [OrderTrackingController::class, 'index'])->name('tracking.index');
     Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
     Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');
