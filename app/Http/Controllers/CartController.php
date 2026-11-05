@@ -177,7 +177,7 @@ class CartController extends Controller
                 return null;
             }
 
-            $unitPrice = $product->final_price;
+            $unitPrice = $product->getPriceForQuantity($item['quantity']);
 
             return [
                 'product' => $product,
@@ -185,6 +185,7 @@ class CartController extends Controller
                 'price' => $unitPrice,
                 'original_price' => (float) $product->price,
                 'subtotal' => $unitPrice * $item['quantity'],
+                'is_wholesale' => $product->has_wholesale_price && $item['quantity'] >= $product->wholesale_min_qty,
                 'savings' => $product->has_discount ? ($product->discount_savings * $item['quantity']) : 0,
             ];
         })->filter()->values();

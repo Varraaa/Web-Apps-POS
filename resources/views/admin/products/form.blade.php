@@ -102,6 +102,30 @@
             </div>
         </div>
 
+        <!-- Wholesale / Bulk Bundle Pricing -->
+        <div class="p-4 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3">
+            <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wider">🏷 Harga Grosir / Pembelian Jumlah Banyak (Bundle Promo)</h4>
+                <span class="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-semibold">Opsional</span>
+            </div>
+            <p class="text-xs text-amber-800">Tawarkan harga lebih murah per pcs jika pelanggan kasir membeli dalam kuantitas minimal tertentu.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label>Minimal Pembelian Grosir (Pcs)
+                    <input type="number" name="wholesale_min_qty" 
+                           value="{{ old('wholesale_min_qty', $product->wholesale_min_qty ?? '') }}" 
+                           placeholder="Contoh: 3" min="2">
+                    <small class="text-slate-400 font-normal">Kuantitas minimal untuk mendapatkan harga grosir (misal min. 3 pcs).</small>
+                </label>
+
+                <label>Harga Satuan Grosir (Rp / Pcs)
+                    <input type="number" name="wholesale_price" 
+                           value="{{ old('wholesale_price', $product->wholesale_price ?? '') }}" 
+                           placeholder="Contoh: 280000" min="0" step="1000">
+                    <small class="text-slate-400 font-normal">Harga khusus per satuan saat syarat minimal kuantitas terpenuhi.</small>
+                </label>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <label>Jumlah Stok Fisik (Pcs)
                 <input type="number" name="stock" value="{{ old('stock', $product->stock ?? '10') }}" 

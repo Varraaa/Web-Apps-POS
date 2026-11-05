@@ -40,6 +40,12 @@
                     Rp {{ number_format($product->price, 0, ',', '.') }}
                 </span>
             @endif
+
+            @if($product->has_wholesale_price)
+                <div class="text-[10px] text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded font-bold mt-1 inline-block">
+                    🏷 Grosir: Min. {{ $product->wholesale_min_qty }} @ Rp {{ number_format($product->wholesale_price, 0, ',', '.') }}
+                </div>
+            @endif
         </div>
 
         <div class="product-actions-bar">

@@ -113,7 +113,7 @@ class AdminPosController extends Controller
                         throw new \RuntimeException("Stok produk \"{$product->name}\" tidak mencukupi (sisa: {$product->stock}).");
                     }
 
-                    $unitPrice = $product->final_price;
+                    $unitPrice = $product->getPriceForQuantity($qty);
                     $lineTotal = $unitPrice * $qty;
                     $subtotal += $lineTotal;
 

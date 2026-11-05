@@ -295,7 +295,11 @@ function initPosRegister() {
 
     // Calculations
     const calculateTotals = () => {
-        const subtotal = ticket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const subtotal = ticket.reduce((sum, item) => {
+            const isWholesale = item.wholesaleMin > 1 && item.quantity >= item.wholesaleMin && item.wholesalePrice > 0;
+            const unitPrice = isWholesale ? item.wholesalePrice : item.price;
+            return sum + (unitPrice * item.quantity);
+        }, 0);
         let discount = 0;
 
         if (appliedCoupon) {
@@ -365,20 +369,27 @@ function initPosRegister() {
             ticketItemsContainer.innerHTML = '';
 
             ticket.forEach(item => {
+                const isWholesale = item.wholesaleMin > 1 && item.quantity >= item.wholesaleMin && item.wholesalePrice > 0;
+                const unitPrice = isWholesale ? item.wholesalePrice : item.price;
+                const lineTotal = unitPrice * item.quantity;
+
                 const row = document.createElement('div');
                 row.className = 'ticket-item-row';
                 row.innerHTML = `
                     <img src="${item.image}" alt="${item.name}" class="ticket-item-thumb">
                     <div class="ticket-item-info">
                         <h4 class="ticket-item-title" title="${item.name}">${item.name}</h4>
-                        <span class="ticket-item-meta">${item.color} · ${formatRp(item.price)}</span>
+                        <span class="ticket-item-meta">
+                            ${item.color} · ${formatRp(unitPrice)}
+                            ${isWholesale ? '<span class="inline-block text-[9px] bg-amber-100 text-amber-800 font-bold px-1 rounded ml-1">Grosir</span>' : ''}
+                        </span>
                     </div>
                     <div class="ticket-qty-control">
                         <button type="button" class="ticket-qty-btn btn-dec" data-id="${item.id}">−</button>
                         <span class="ticket-qty-val">${item.quantity}</span>
                         <button type="button" class="ticket-qty-btn btn-inc" data-id="${item.id}" ${item.quantity >= item.stock ? 'disabled' : ''}>+</button>
                     </div>
-                    <span class="ticket-item-subtotal">${formatRp(item.price * item.quantity)}</span>
+                    <span class="ticket-item-subtotal">${formatRp(lineTotal)}</span>
                     <button type="button" class="ticket-del-btn" data-id="${item.id}" title="Hapus">✕</button>
                 `;
 
@@ -438,6 +449,8 @@ function initPosRegister() {
                     category: card.dataset.category,
                     price: parseFloat(card.dataset.price),
                     originalPrice: parseFloat(card.dataset.originalPrice),
+                    wholesaleMin: parseInt(card.dataset.wholesaleMin, 10) || 0,
+                    wholesalePrice: parseFloat(card.dataset.wholesalePrice) || 0,
                     stock: stock,
                     image: card.dataset.image,
                     color: card.dataset.color,

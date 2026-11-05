@@ -177,6 +177,8 @@ class AdminProductController extends Controller
             'price' => ['required', 'numeric', 'min:0'],
             'discount_percent' => ['nullable', 'integer', 'min:0', 'max:99'],
             'stock' => ['required', 'integer', 'min:0'],
+            'wholesale_min_qty' => ['nullable', 'integer', 'min:2'],
+            'wholesale_price' => ['nullable', 'numeric', 'min:0'],
             'size' => ['nullable', 'string', 'max:80'],
             'color' => ['nullable', 'string', 'max:50'],
             'image_url' => ['required', 'url', 'max:500'],
@@ -184,6 +186,8 @@ class AdminProductController extends Controller
         ]);
 
         $validated['discount_percent'] = (int) ($validated['discount_percent'] ?? 0);
+        $validated['wholesale_min_qty'] = ! empty($validated['wholesale_min_qty']) ? (int) $validated['wholesale_min_qty'] : null;
+        $validated['wholesale_price'] = ! empty($validated['wholesale_price']) ? (float) $validated['wholesale_price'] : null;
         $validated['is_featured'] = $request->boolean('is_featured');
 
         return $validated;

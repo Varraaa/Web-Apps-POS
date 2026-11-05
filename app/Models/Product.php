@@ -21,6 +21,8 @@ class Product extends Model
         'price',
         'discount_percent',
         'stock',
+        'wholesale_min_qty',
+        'wholesale_price',
         'size',
         'color',
         'image_url',
@@ -33,6 +35,8 @@ class Product extends Model
             'price' => 'decimal:2',
             'discount_percent' => 'integer',
             'stock' => 'integer',
+            'wholesale_min_qty' => 'integer',
+            'wholesale_price' => 'float',
             'is_featured' => 'boolean',
         ];
     }
@@ -68,6 +72,25 @@ class Product extends Model
     public function getFormattedFinalPriceAttribute(): string
     {
         return 'Rp ' . number_format($this->final_price, 0, ',', '.');
+    }
+
+    public function getHasWholesalePriceAttribute(): bool
+    {
+        return (int) $this->wholesale_min_qty > 1 && (float) $this->wholesale_price > 0 && (float) $this->wholesale_price < $this->final_price;
+    }
+
+    public function getFormattedWholesalePriceAttribute(): string
+    {
+        return 'Rp ' . number_format((float) $this->wholesale_price, 0, ',', '.');
+    }
+
+    public function getPriceForQuantity(int $quantity): float
+    {
+        if ($this->has_wholesale_price && $quantity >= $this->wholesale_min_qty) {
+            return (float) $this->wholesale_price;
+        }
+
+        return $this->final_price;
     }
 
     public function getIsLowStockAttribute(): bool

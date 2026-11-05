@@ -90,6 +90,8 @@
                          data-image="{{ $product->image_url }}"
                          data-color="{{ $product->color ?? '-' }}"
                          data-size="{{ $product->size ?? '-' }}"
+                         data-wholesale-min="{{ $product->wholesale_min_qty ?? 0 }}"
+                         data-wholesale-price="{{ $product->wholesale_price ?? 0 }}"
                          title="{{ $product->name }}">
                         <div class="pos-product-thumb">
                             <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
@@ -109,6 +111,11 @@
                                     <span class="pos-old-price">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                                 @endif
                             </div>
+                            @if($product->has_wholesale_price)
+                                <span class="block text-[10px] text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-bold mt-1">
+                                    🏷 Grosir: Min. {{ $product->wholesale_min_qty }} @ Rp {{ number_format($product->wholesale_price, 0, ',', '.') }}
+                                </span>
+                            @endif
                         </div>
                     </div>
                 @empty
