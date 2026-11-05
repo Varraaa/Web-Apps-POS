@@ -626,6 +626,160 @@ function initPosRegister() {
         }
     });
 
+    // POS Held Bills (Parkir Transaksi) Engine
+    const btnHoldBill = document.getElementById('pos-btn-hold-bill');
+    const btnViewHeld = document.getElementById('pos-btn-view-held');
+    const heldCountBadge = document.getElementById('pos-held-count-badge');
+    const heldModal = document.getElementById('pos-held-modal');
+    const closeHeldModal = document.getElementById('pos-close-held-modal');
+    const dismissHeldModal = document.getElementById('pos-dismiss-held-modal');
+    const heldList = document.getElementById('pos-held-list');
+
+    const refreshHeldBillsCount = async () => {
+        try {
+            const res = await fetch('/admin/pos/held-bills');
+            const data = await res.json();
+            if (heldCountBadge) heldCountBadge.textContent = data.count || 0;
+            return data;
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    refreshHeldBillsCount();
+
+    btnHoldBill?.addEventListener('click', async () => {
+        if (ticket.length === 0) {
+            alert('Tiket kasir kosong. Tambahkan produk sebelum menyimpan tagihan.');
+            return;
+        }
+
+        const note = prompt('Beri catatan/nama untuk tagihan yang diparkir (opsional):', activeCustomer ? activeCustomer.name : 'Antrean Pelanggan');
+        if (note === null) return; // User cancelled
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const customerName = activeCustomer ? activeCustomer.name : (document.getElementById('pos-customer-name')?.value || 'Pelanggan Walk-In');
+
+        try {
+            const res = await fetch('/admin/pos/hold-bill', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify({
+                    customer_name: customerName,
+                    customer_id: activeCustomer ? activeCustomer.id : null,
+                    reference_note: note,
+                    coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                    items: ticket
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Gagal menyimpan tagihan.');
+            }
+
+            // Clear current register
+            ticket = [];
+            appliedCoupon = null;
+            activeCustomer = null;
+            selectedMemberCard?.classList.add('hidden');
+            walkinInputs?.classList.remove('hidden');
+            renderTicket();
+            refreshHeldBillsCount();
+
+            if (window.showToast) {
+                window.showToast('Tagihan berhasil diparkir! Register siap untuk pelanggan berikutnya.', 'success');
+            }
+        } catch (err) {
+            alert(err.message || 'Terjadi kesalahan sistem.');
+        }
+    });
+
+    const openHeldModal = async () => {
+        const data = await refreshHeldBillsCount();
+        if (!heldList) return;
+
+        heldList.innerHTML = '';
+        if (data.bills && data.bills.length > 0) {
+            data.bills.forEach(bill => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'py-3 flex items-center justify-between gap-3 text-xs';
+                itemDiv.innerHTML = `
+                    <div>
+                        <strong class="text-slate-900 block font-bold">${bill.customer_name}</strong>
+                        <span class="text-[11px] text-slate-500">${bill.items_count} item · ${bill.time_ago}</span>
+                        ${bill.reference_note ? `<small class="block text-[10px] text-amber-700 font-semibold italic mt-0.5">"${bill.reference_note}"</small>` : ''}
+                    </div>
+                    <div class="text-right">
+                        <strong class="text-slate-900 block">${bill.formatted_subtotal}</strong>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <button type="button" class="btn-recall-bill pos-btn-pay text-[10px] py-1 px-2" data-id="${bill.id}">
+                                Buka ↗
+                            </button>
+                            <button type="button" class="btn-del-held pos-btn-danger-ghost text-[10px] py-1 px-2" data-id="${bill.id}">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Events
+                itemDiv.querySelector('.btn-recall-bill').addEventListener('click', async () => {
+                    if (ticket.length > 0 && !confirm('Tiket saat ini masih berisi item. Ganti dengan tagihan yang diparkir?')) {
+                        return;
+                    }
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    try {
+                        const recallRes = await fetch(`/admin/pos/held-bills/${bill.id}/recall`, {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': csrfToken || '' }
+                        });
+                        const recalled = await recallRes.json();
+                        if (recalled.success && recalled.bill) {
+                            ticket = recalled.bill.items;
+                            if (recalled.bill.customer) {
+                                selectMember(recalled.bill.customer);
+                            }
+                            heldModal.classList.add('hidden');
+                            renderTicket();
+                            refreshHeldBillsCount();
+                            if (window.showToast) window.showToast('Tagihan berhasil dibuka kembali!', 'success');
+                        }
+                    } catch (e) {
+                        alert('Gagal memulihkan tagihan.');
+                    }
+                });
+
+                itemDiv.querySelector('.btn-del-held').addEventListener('click', async () => {
+                    if (!confirm('Hapus tagihan yang diparkir ini?')) return;
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    try {
+                        await fetch(`/admin/pos/held-bills/${bill.id}`, {
+                            method: 'DELETE',
+                            headers: { 'X-CSRF-TOKEN': csrfToken || '' }
+                        });
+                        openHeldModal();
+                    } catch (e) {
+                        alert('Gagal menghapus tagihan.');
+                    }
+                });
+
+                heldList.appendChild(itemDiv);
+            });
+        } else {
+            heldList.innerHTML = '<div class="py-8 text-center text-slate-400 text-xs">Tidak ada tagihan yang sedang diparkir.</div>';
+        }
+
+        heldModal?.classList.remove('hidden');
+    };
+
+    btnViewHeld?.addEventListener('click', openHeldModal);
+    closeHeldModal?.addEventListener('click', () => heldModal?.classList.add('hidden'));
+    dismissHeldModal?.addEventListener('click', () => heldModal?.classList.add('hidden'));
+
     // Search and Category Filter
     let activeCategory = '';
     const filterProducts = () => {

@@ -97,9 +97,18 @@
                     <h2 class="text-base font-bold text-slate-800">Tiket Pesanan Kasir</h2>
                     <span class="text-xs text-slate-500" id="pos-ticket-count">0 item dipilih</span>
                 </div>
-                <button type="button" id="pos-btn-clear-cart" class="pos-btn-danger-ghost text-xs">
-                    Kosongkan (Esc)
-                </button>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" id="pos-btn-view-held" class="text-xs font-bold px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-1">
+                        <span>📂 Parkir:</span>
+                        <span id="pos-held-count-badge" class="bg-amber-800 text-white text-[9px] px-1.5 py-0.2 rounded-full font-mono">0</span>
+                    </button>
+                    <button type="button" id="pos-btn-hold-bill" class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors" title="Simpan / Parkir Tagihan Sementara">
+                        Hold
+                    </button>
+                    <button type="button" id="pos-btn-clear-cart" class="pos-btn-danger-ghost text-xs">
+                        Kosongkan
+                    </button>
+                </div>
             </div>
 
             <!-- Customer & Loyalty Member Meta -->
@@ -349,6 +358,29 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal Daftar Tagihan Parkir / Disimpan -->
+<div id="pos-held-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-md">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900">Tagihan Disimpan (Parkir Transaksi)</h3>
+                <p class="text-xs text-slate-500">Buka kembali tagihan yang sempat ditunda atau hapus bila tidak dilanjutkan.</p>
+            </div>
+            <button type="button" id="pos-close-held-modal" class="pos-modal-close-btn">&times;</button>
+        </div>
+
+        <div class="pos-modal-body max-h-[60vh] overflow-y-auto">
+            <div id="pos-held-list" class="divide-y divide-slate-100">
+                <!-- Dynamic Held Bills -->
+            </div>
+        </div>
+
+        <div class="pos-modal-footer">
+            <button type="button" id="pos-dismiss-held-modal" class="pos-btn-ghost text-xs w-full">Tutup</button>
+        </div>
     </div>
 </div>
 

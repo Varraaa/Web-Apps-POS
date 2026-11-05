@@ -39,6 +39,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/pos', [AdminPosController::class, 'index'])->name('pos.index');
     Route::post('/pos/checkout', [AdminPosController::class, 'checkout'])->name('pos.checkout');
     Route::get('/pos/receipt/{order}', [AdminPosController::class, 'receipt'])->name('pos.receipt');
+    Route::get('/pos/held-bills', [AdminPosController::class, 'listHeldBills'])->name('pos.held-bills.index');
+    Route::post('/pos/hold-bill', [AdminPosController::class, 'holdBill'])->name('pos.hold-bill');
+    Route::post('/pos/held-bills/{heldBill}/recall', [AdminPosController::class, 'recallHeldBill'])->name('pos.held-bills.recall');
+    Route::delete('/pos/held-bills/{heldBill}', [AdminPosController::class, 'deleteHeldBill'])->name('pos.held-bills.destroy');
     Route::resource('products', AdminProductController::class)->except(['show']);
     Route::resource('discounts', AdminDiscountController::class)->except(['show']);
     Route::patch('/discounts/{discount}/toggle', [AdminDiscountController::class, 'toggle'])->name('discounts.toggle');

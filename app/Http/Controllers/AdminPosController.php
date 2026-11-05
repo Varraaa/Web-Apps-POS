@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Order;
+use App\Models\PosHeldBill;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -214,6 +215,96 @@ class AdminPosController extends Controller
 
             return back()->withInput()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * List currently held bills.
+     */
+    public function listHeldBills(): JsonResponse
+    {
+        $bills = PosHeldBill::with('customer')->latest()->get();
+
+        return response()->json([
+            'count' => $bills->count(),
+            'bills' => $bills->map(fn ($b) => [
+                'id' => $b->id,
+                'customer_name' => $b->customer_name,
+                'customer_id' => $b->customer_id,
+                'reference_note' => $b->reference_note,
+                'items_count' => collect($b->items)->sum('quantity'),
+                'subtotal' => (float) $b->subtotal,
+                'formatted_subtotal' => $b->formatted_subtotal,
+                'time_ago' => $b->created_at->diffForHumans(),
+            ]),
+        ]);
+    }
+
+    /**
+     * Hold active cart.
+     */
+    public function holdBill(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_id' => ['nullable', 'exists:customers,id'],
+            'reference_note' => ['nullable', 'string', 'max:255'],
+            'coupon_code' => ['nullable', 'string', 'max:30'],
+            'items' => ['required', 'array', 'min:1'],
+        ]);
+
+        $subtotal = collect($validated['items'])->sum(fn ($i) => (float) $i['price'] * (int) $i['quantity']);
+
+        $held = PosHeldBill::create([
+            'user_id' => $request->user()?->id,
+            'customer_id' => $validated['customer_id'] ?? null,
+            'customer_name' => $validated['customer_name'] ?? 'Pelanggan Walk-In',
+            'reference_note' => $validated['reference_note'] ?? null,
+            'items' => $validated['items'],
+            'coupon_code' => $validated['coupon_code'] ?? null,
+            'subtotal' => $subtotal,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tagihan transaksi berhasil diparkir/disimpan.',
+            'held_id' => $held->id,
+        ]);
+    }
+
+    /**
+     * Recall and remove held bill.
+     */
+    public function recallHeldBill(PosHeldBill $heldBill): JsonResponse
+    {
+        $data = [
+            'id' => $heldBill->id,
+            'customer_name' => $heldBill->customer_name,
+            'customer_id' => $heldBill->customer_id,
+            'customer' => $heldBill->customer,
+            'reference_note' => $heldBill->reference_note,
+            'coupon_code' => $heldBill->coupon_code,
+            'items' => $heldBill->items,
+        ];
+
+        $heldBill->delete();
+
+        return response()->json([
+            'success' => true,
+            'bill' => $data,
+        ]);
+    }
+
+    /**
+     * Delete held bill.
+     */
+    public function deleteHeldBill(PosHeldBill $heldBill): JsonResponse
+    {
+        $heldBill->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tagihan tersimpan berhasil dihapus.',
+        ]);
     }
 
     /**
