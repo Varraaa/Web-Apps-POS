@@ -242,6 +242,69 @@ function initThemeToggle() {
 }
 
 /**
+ * Tactile Web Audio API Synthesizer for POS Feedback
+ */
+class PosAudioFeedback {
+    constructor() {
+        this.ctx = null;
+        this.enabled = localStorage.getItem('varstore_pos_audio') !== 'disabled';
+    }
+
+    init() {
+        if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
+        localStorage.setItem('varstore_pos_audio', this.enabled ? 'enabled' : 'disabled');
+        return this.enabled;
+    }
+
+    playTone(freq, type = 'sine', duration = 0.08, gainVal = 0.1) {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+    }
+
+    beep() {
+        this.playTone(1760, 'sine', 0.06, 0.12);
+    }
+
+    pop() {
+        this.playTone(440, 'triangle', 0.04, 0.08);
+    }
+
+    warning() {
+        this.playTone(280, 'sawtooth', 0.09, 0.15);
+        setTimeout(() => this.playTone(220, 'sawtooth', 0.12, 0.15), 110);
+    }
+
+    chime() {
+        this.playTone(1046.50, 'sine', 0.18, 0.15);
+        setTimeout(() => this.playTone(1318.51, 'sine', 0.18, 0.15), 90);
+        setTimeout(() => this.playTone(1567.98, 'sine', 0.35, 0.18), 180);
+    }
+}
+
+/**
  * Modern POS Register Terminal Controller
  */
 function initPosRegister() {
@@ -321,6 +384,23 @@ function initPosRegister() {
         updateClock();
         setInterval(updateClock, 1000);
     }
+
+    // Tactile Audio Feedback Synthesizer
+    const posAudio = new PosAudioFeedback();
+    const audioToggleBtn = document.getElementById('pos-audio-toggle');
+    const audioIcon = document.getElementById('pos-audio-icon');
+    const audioLabel = document.getElementById('pos-audio-label');
+
+    const updateAudioUI = () => {
+        if (audioIcon) audioIcon.textContent = posAudio.enabled ? '🔊' : '🔇';
+        if (audioLabel) audioLabel.textContent = posAudio.enabled ? 'Audio' : 'Mute';
+    };
+    audioToggleBtn?.addEventListener('click', () => {
+        posAudio.toggle();
+        updateAudioUI();
+        if (posAudio.enabled) posAudio.beep();
+    });
+    updateAudioUI();
 
     // Number formatter
     const formatRp = (num) => 'Rp ' + Number(num).toLocaleString('id-ID');
@@ -447,6 +527,7 @@ function initPosRegister() {
                 });
 
                 row.querySelector('.ticket-del-btn').addEventListener('click', () => {
+                    posAudio.pop();
                     ticket = ticket.filter(t => t.id !== item.id);
                     renderTicket();
                     calculateTotals();
@@ -464,17 +545,23 @@ function initPosRegister() {
         card.addEventListener('click', () => {
             const id = parseInt(card.dataset.id, 10);
             const stock = parseInt(card.dataset.stock, 10);
-            if (stock <= 0) return;
+            if (stock <= 0) {
+                posAudio.warning();
+                return;
+            }
 
             const existing = ticket.find(t => t.id === id);
             if (existing) {
                 if (existing.quantity < stock) {
                     existing.quantity++;
+                    posAudio.beep();
                 } else if (window.showToast) {
+                    posAudio.warning();
                     window.showToast(`Stok produk "${card.dataset.name}" maksimal ${stock} item.`, 'info');
                     return;
                 }
             } else {
+                posAudio.beep();
                 ticket.push({
                     id: id,
                     name: card.dataset.name,
@@ -503,6 +590,7 @@ function initPosRegister() {
     clearCartBtn?.addEventListener('click', () => {
         if (ticket.length === 0) return;
         if (confirm('Kosongkan semua item di tiket kasir saat ini?')) {
+            posAudio.pop();
             ticket = [];
             appliedCoupon = null;
             renderTicket();
@@ -1078,6 +1166,7 @@ function initPosRegister() {
         const paid = parseFloat(cashInput.value) || grandTotal;
 
         if (paymentMethod === 'cash' && paid < grandTotal) {
+            posAudio.warning();
             alert('Uang yang dibayarkan kurang dari total tagihan.');
             return;
         }
@@ -1123,6 +1212,7 @@ function initPosRegister() {
 
             // Close payment modal
             closePaymentModal();
+            posAudio.chime();
 
             // Open Receipt Modal
             receiptFrame.src = result.receipt_url;

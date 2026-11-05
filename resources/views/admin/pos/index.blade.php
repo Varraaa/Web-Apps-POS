@@ -49,6 +49,9 @@
             <a href="{{ route('admin.orders.index') }}" class="pos-btn-ghost text-xs">
                 <span>Riwayat Transaksi ↗</span>
             </a>
+            <button type="button" id="pos-audio-toggle" class="pos-btn-ghost text-xs py-1.5 px-2.5 flex items-center gap-1.5" title="Suara Terminal Kasir">
+                <span id="pos-audio-icon">🔊</span> <span id="pos-audio-label" class="hidden sm:inline text-[11px] font-bold">Audio</span>
+            </button>
             <button type="button" id="pos-theme-toggle" class="pos-btn-ghost text-xs py-1.5 px-2.5 flex items-center gap-1.5" title="Ganti Tema Gelap / Terang">
                 <span id="pos-theme-icon">🌙</span> <span id="pos-theme-label" class="hidden sm:inline text-[11px] font-bold">Gelap</span>
             </button>
