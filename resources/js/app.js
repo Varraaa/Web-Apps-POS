@@ -219,6 +219,7 @@ function initPosRegister() {
     let ticket = [];
     let appliedCoupon = null;
     let paymentMethod = 'cash';
+    let activeCustomer = null;
 
     // Elements
     const searchInput = document.getElementById('pos-search-input');
@@ -229,6 +230,24 @@ function initPosRegister() {
     const ticketEmptyNotice = document.getElementById('pos-ticket-empty');
     const ticketCountLabel = document.getElementById('pos-ticket-count');
     const clearCartBtn = document.getElementById('pos-btn-clear-cart');
+
+    // Customer & Loyalty Elements
+    const memberSearchInput = document.getElementById('pos-member-search');
+    const memberResultsDropdown = document.getElementById('pos-member-results');
+    const selectedMemberCard = document.getElementById('pos-selected-member-card');
+    const selectedMemberName = document.getElementById('selected-member-name');
+    const selectedMemberTier = document.getElementById('selected-member-tier');
+    const selectedMemberPoints = document.getElementById('selected-member-points');
+    const removeMemberBtn = document.getElementById('pos-remove-member');
+    const redeemPointsCheck = document.getElementById('pos-redeem-points-check');
+    const labelRedeemPoints = document.getElementById('label-redeem-points');
+    const walkinInputs = document.getElementById('pos-walkin-inputs');
+
+    const customerModal = document.getElementById('pos-customer-modal');
+    const openCustomerModalBtn = document.getElementById('pos-btn-new-customer');
+    const closeCustomerModalBtn = document.getElementById('pos-close-customer-modal');
+    const cancelCustomerModalBtn = document.getElementById('pos-cancel-customer-modal');
+    const quickCustomerForm = document.getElementById('pos-quick-customer-form');
 
     const couponSelect = document.getElementById('pos-coupon-select');
     const applyCouponBtn = document.getElementById('pos-apply-coupon');
@@ -297,14 +316,31 @@ function initPosRegister() {
             }
         }
 
-        const grandTotal = Math.max(0, subtotal - discount);
+        let pointsDiscount = 0;
+        const totalAfterCoupon = Math.max(0, subtotal - discount);
+
+        if (activeCustomer && activeCustomer.points > 0) {
+            const maxPoints = Math.min(activeCustomer.points, Math.floor(totalAfterCoupon / 100));
+            if (redeemPointsCheck && redeemPointsCheck.checked) {
+                pointsDiscount = maxPoints * 100;
+                labelRedeemPoints.textContent = `Tukar ${maxPoints} Poin (Hemat ${formatRp(pointsDiscount)})`;
+            } else if (labelRedeemPoints) {
+                labelRedeemPoints.textContent = `Tukar Poin (${activeCustomer.points} Poin = Hemat s/d ${formatRp(maxPoints * 100)})`;
+            }
+        }
+
+        const grandTotal = Math.max(0, totalAfterCoupon - pointsDiscount);
 
         // Update UI
         subtotalDisplay.textContent = formatRp(subtotal);
-        if (discount > 0 && appliedCoupon) {
+        if ((discount + pointsDiscount) > 0) {
             discountRow.style.display = 'flex';
-            discountLabel.textContent = appliedCoupon.code;
-            discountDisplay.textContent = '- ' + formatRp(discount);
+            let label = appliedCoupon ? appliedCoupon.code : '';
+            if (pointsDiscount > 0) {
+                label += (label ? ' + ' : '') + 'Poin VIP';
+            }
+            discountLabel.textContent = label;
+            discountDisplay.textContent = '- ' + formatRp(discount + pointsDiscount);
         } else {
             discountRow.style.display = 'none';
         }
@@ -463,6 +499,133 @@ function initPosRegister() {
         }
     });
 
+    // Customer & Loyalty Member Functions
+    const selectMember = (cust) => {
+        activeCustomer = cust;
+        memberResultsDropdown.classList.add('hidden');
+        memberSearchInput.value = '';
+
+        selectedMemberName.textContent = `${cust.name} (${cust.member_code})`;
+        selectedMemberTier.textContent = cust.tier_label || cust.tier.toUpperCase();
+        selectedMemberPoints.textContent = `★ ${cust.points} Poin`;
+        selectedMemberCard.classList.remove('hidden');
+        walkinInputs.classList.add('hidden');
+
+        if (redeemPointsCheck) {
+            redeemPointsCheck.checked = false;
+        }
+
+        calculateTotals();
+        if (window.showToast) {
+            window.showToast(`Member VIP ${cust.name} dipilih!`, 'info');
+        }
+    };
+
+    let memberSearchTimeout = null;
+    memberSearchInput?.addEventListener('input', () => {
+        clearTimeout(memberSearchTimeout);
+        const q = memberSearchInput.value.trim();
+
+        if (q.length < 2) {
+            memberResultsDropdown.classList.add('hidden');
+            memberResultsDropdown.innerHTML = '';
+            return;
+        }
+
+        memberSearchTimeout = setTimeout(async () => {
+            try {
+                const res = await fetch(`/admin/customers/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                memberResultsDropdown.innerHTML = '';
+
+                if (data.customers && data.customers.length > 0) {
+                    data.customers.forEach(cust => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex items-center justify-between text-xs';
+                        div.innerHTML = `
+                            <div>
+                                <strong class="text-slate-900 block">${cust.name}</strong>
+                                <span class="text-[10px] text-slate-500 font-mono">${cust.member_code} · ${cust.phone || '-'}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 uppercase">${cust.tier}</span>
+                                <small class="text-[10px] text-emerald-600 font-bold block mt-0.5">★ ${cust.points} pt</small>
+                            </div>
+                        `;
+                        div.addEventListener('click', () => selectMember(cust));
+                        memberResultsDropdown.appendChild(div);
+                    });
+                    memberResultsDropdown.classList.remove('hidden');
+                } else {
+                    memberResultsDropdown.innerHTML = '<div class="p-3 text-xs text-slate-400 text-center">Member tidak ditemukan.</div>';
+                    memberResultsDropdown.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }, 300);
+    });
+
+    removeMemberBtn?.addEventListener('click', () => {
+        activeCustomer = null;
+        selectedMemberCard.classList.add('hidden');
+        walkinInputs.classList.remove('hidden');
+        if (redeemPointsCheck) redeemPointsCheck.checked = false;
+        calculateTotals();
+        if (window.showToast) window.showToast('Member dilepas dari transaksi.', 'info');
+    });
+
+    redeemPointsCheck?.addEventListener('change', () => {
+        calculateTotals();
+        updateChangeCalculation();
+    });
+
+    // Quick Member Register Modal Handlers
+    openCustomerModalBtn?.addEventListener('click', () => {
+        customerModal?.classList.remove('hidden');
+        document.getElementById('cust-name')?.focus();
+    });
+
+    const closeCustModal = () => customerModal?.classList.add('hidden');
+    closeCustomerModalBtn?.addEventListener('click', closeCustModal);
+    cancelCustomerModalBtn?.addEventListener('click', closeCustModal);
+
+    quickCustomerForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const name = document.getElementById('cust-name').value.trim();
+        const phone = document.getElementById('cust-phone').value.trim();
+        const email = document.getElementById('cust-email')?.value.trim() || null;
+        const address = document.getElementById('cust-address')?.value.trim() || null;
+
+        try {
+            const res = await fetch('/admin/customers/quick-create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify({ name, phone, email, address })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Gagal mendaftarkan member.');
+            }
+
+            closeCustModal();
+            quickCustomerForm.reset();
+            selectMember(data.customer);
+
+            if (window.showToast) {
+                window.showToast(`Member baru ${data.customer.name} berhasil didaftarkan!`, 'success');
+            }
+        } catch (err) {
+            alert(err.message || 'Terjadi kesalahan saat mendaftarkan member.');
+        }
+    });
+
     // Search and Category Filter
     let activeCategory = '';
     const filterProducts = () => {
@@ -603,8 +766,10 @@ function initPosRegister() {
                     'X-CSRF-TOKEN': csrfToken || '',
                 },
                 body: JSON.stringify({
-                    customer_name: customerName,
-                    customer_phone: customerPhone,
+                    customer_id: activeCustomer ? activeCustomer.id : null,
+                    redeem_points: redeemPointsCheck?.checked ? true : false,
+                    customer_name: activeCustomer ? activeCustomer.name : customerName,
+                    customer_phone: activeCustomer ? (activeCustomer.phone || '-') : customerPhone,
                     payment_method: paymentMethod,
                     amount_paid: paid,
                     coupon_code: appliedCoupon?.code || null,
@@ -637,6 +802,10 @@ function initPosRegister() {
             // Reset Ticket
             ticket = [];
             appliedCoupon = null;
+            activeCustomer = null;
+            selectedMemberCard?.classList.add('hidden');
+            walkinInputs?.classList.remove('hidden');
+            if (redeemPointsCheck) redeemPointsCheck.checked = false;
             document.getElementById('pos-notes-input').value = '';
             renderTicket();
 

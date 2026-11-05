@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Order;
 use App\Models\Product;
@@ -66,6 +67,8 @@ class AdminPosController extends Controller
     public function checkout(Request $request): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
+            'customer_id' => ['nullable', 'exists:customers,id'],
+            'redeem_points' => ['nullable', 'boolean'],
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'payment_method' => ['required', 'string', 'in:cash,qris,transfer,whatsapp'],
@@ -77,13 +80,15 @@ class AdminPosController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $customerName = trim($data['customer_name'] ?? '') ?: 'Pelanggan Walk-In';
-        $customerPhone = trim($data['customer_phone'] ?? '') ?: '-';
+        $customerId = $data['customer_id'] ?? null;
+        $customer = $customerId ? Customer::find($customerId) : null;
+        $customerName = $customer ? $customer->name : (trim($data['customer_name'] ?? '') ?: 'Pelanggan Walk-In');
+        $customerPhone = $customer ? ($customer->phone ?: '-') : (trim($data['customer_phone'] ?? '') ?: '-');
         $notes = $data['notes'] ?? null;
         $paymentMethod = $data['payment_method'];
 
         try {
-            $order = DB::transaction(function () use ($data, $customerName, $customerPhone, $notes, $paymentMethod, $request): Order {
+            $order = DB::transaction(function () use ($data, $customer, $customerName, $customerPhone, $notes, $paymentMethod, $request): Order {
                 $productIds = collect($data['items'])->pluck('product_id')->all();
                 $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
 
@@ -118,7 +123,7 @@ class AdminPosController extends Controller
                     ];
                 }
 
-                // Calculate discount
+                // Calculate coupon discount
                 $discountAmount = 0.0;
                 $couponCode = null;
 
@@ -130,7 +135,19 @@ class AdminPosController extends Controller
                     }
                 }
 
-                $total = max(0.0, $subtotal - $discountAmount);
+                $totalAfterCoupon = max(0.0, $subtotal - $discountAmount);
+
+                // Calculate Loyalty Points Redemption
+                $pointsRedeemed = 0;
+                $pointsDiscountAmount = 0.0;
+
+                if ($customer && ! empty($data['redeem_points']) && $customer->points > 0) {
+                    $maxRedeemablePoints = (int) floor($totalAfterCoupon / 100);
+                    $pointsRedeemed = min($customer->points, $maxRedeemablePoints);
+                    $pointsDiscountAmount = $pointsRedeemed * 100;
+                }
+
+                $total = max(0.0, $totalAfterCoupon - $pointsDiscountAmount);
                 $amountPaid = isset($data['amount_paid']) ? (float) $data['amount_paid'] : $total;
 
                 if ($paymentMethod === 'cash' && $amountPaid < $total) {
@@ -139,14 +156,21 @@ class AdminPosController extends Controller
 
                 $changeAmount = ($paymentMethod === 'cash') ? max(0.0, $amountPaid - $total) : 0.0;
 
+                // Points earned for this purchase: 1 point per Rp 10.000 spent
+                $pointsEarned = $customer ? (int) floor($total / 10000) : 0;
+
                 $order = Order::create([
                     'user_id' => $request->user()?->id,
+                    'customer_id' => $customer?->id,
                     'customer_name' => $customerName,
                     'customer_phone' => $customerPhone,
                     'shipping_address' => 'Transaksi Kasir POS / Di Tempat',
                     'subtotal' => $subtotal,
                     'discount_amount' => $discountAmount,
                     'coupon_code' => $couponCode,
+                    'points_earned' => $pointsEarned,
+                    'points_redeemed' => $pointsRedeemed,
+                    'points_discount_amount' => $pointsDiscountAmount,
                     'total' => $total,
                     'payment_method' => $paymentMethod,
                     'amount_paid' => $amountPaid,
@@ -159,6 +183,10 @@ class AdminPosController extends Controller
 
                 foreach ($orderItemsData as $itemData) {
                     $order->items()->create($itemData);
+                }
+
+                if ($customer) {
+                    $customer->recordTransaction($total, $pointsEarned, $pointsRedeemed);
                 }
 
                 return $order;

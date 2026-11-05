@@ -102,16 +102,54 @@
                 </button>
             </div>
 
-            <!-- Customer & Notes Accordion / Inputs -->
+            <!-- Customer & Loyalty Member Meta -->
             <div class="pos-ticket-meta">
-                <div class="grid grid-cols-2 gap-2">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="pos-meta-label">Pelanggan / Member VIP</span>
+                    <button type="button" id="pos-btn-new-customer" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 hover:bg-emerald-100 transition-colors">
+                        + Member Baru
+                    </button>
+                </div>
+
+                <!-- Member Search & Active Badge -->
+                <div class="relative">
+                    <input type="text" id="pos-member-search" placeholder="Cari Member (Nama / HP / ID)..." 
+                           class="pos-meta-input text-xs" autocomplete="off">
+                    <div id="pos-member-results" class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-30 hidden">
+                        <!-- Dynamic Results -->
+                    </div>
+                </div>
+
+                <!-- Selected Member Profile Card -->
+                <div id="pos-selected-member-card" class="mt-2 p-2 bg-slate-100/90 rounded-lg border border-slate-200 hidden">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <strong class="text-xs text-slate-900 block" id="selected-member-name">-</strong>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800" id="selected-member-tier">Bronze</span>
+                                <span class="text-[10px] font-bold text-emerald-600" id="selected-member-points">★ 0 Poin</span>
+                            </div>
+                        </div>
+                        <button type="button" id="pos-remove-member" class="text-xs text-rose-500 font-bold hover:text-rose-700 p-1" title="Hapus member">
+                            ✕
+                        </button>
+                    </div>
+
+                    <!-- Points Redemption Toggle -->
+                    <label class="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200 cursor-pointer select-none">
+                        <input type="checkbox" id="pos-redeem-points-check" class="rounded text-emerald-600 focus:ring-0">
+                        <span class="text-[11px] text-slate-700 font-semibold" id="label-redeem-points">
+                            Tukar Poin Belanja (Hemat Rp 0)
+                        </span>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mt-2" id="pos-walkin-inputs">
                     <div>
-                        <label class="pos-meta-label">Nama Pelanggan</label>
-                        <input type="text" id="pos-customer-name" value="Pelanggan Walk-In" class="pos-meta-input">
+                        <input type="text" id="pos-customer-name" value="Pelanggan Walk-In" class="pos-meta-input text-[11px]" placeholder="Nama">
                     </div>
                     <div>
-                        <label class="pos-meta-label">Nomor WhatsApp / Telp</label>
-                        <input type="text" id="pos-customer-phone" placeholder="08xxxxxxxxxx" class="pos-meta-input">
+                        <input type="text" id="pos-customer-phone" placeholder="08xxxxxxxxxx" class="pos-meta-input text-[11px]">
                     </div>
                 </div>
             </div>
@@ -273,6 +311,44 @@
                 <span>Konfirmasi Pembayaran Selesai ✓</span>
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Modal Registrasi Member Baru di POS -->
+<div id="pos-customer-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-sm">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900">Daftarkan Member Baru</h3>
+                <p class="text-xs text-slate-500">Pelanggan baru langsung mendapat bonus 10 Poin Loyalitas.</p>
+            </div>
+            <button type="button" id="pos-close-customer-modal" class="pos-modal-close-btn">&times;</button>
+        </div>
+
+        <form id="pos-quick-customer-form" class="pos-modal-body space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap *</label>
+                <input type="text" id="cust-name" class="pos-meta-input text-xs" placeholder="Nama Pelanggan" required>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp / HP *</label>
+                <input type="tel" id="cust-phone" class="pos-meta-input text-xs" placeholder="08xxxxxxxxxx" required>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Email (Opsional)</label>
+                <input type="email" id="cust-email" class="pos-meta-input text-xs" placeholder="nama@email.com">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Singkat (Opsional)</label>
+                <input type="text" id="cust-address" class="pos-meta-input text-xs" placeholder="Kota / Alamat">
+            </div>
+            <div class="pt-3 border-t border-slate-100 flex gap-2">
+                <button type="button" id="pos-cancel-customer-modal" class="pos-btn-ghost text-xs flex-1">Batal</button>
+                <button type="submit" id="pos-submit-customer-btn" class="pos-btn-pay text-xs flex-1 justify-center">
+                    Simpan Member ↗
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
