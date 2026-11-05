@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin Studio & POS — VarStore')</title>
+    <script>
+        if (localStorage.getItem('varstore_theme') === 'dark') {
+            document.documentElement.classList.add('theme-dark');
+        }
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -67,6 +72,9 @@
             </nav>
 
             <div class="admin-sidebar-bottom">
+                <button type="button" id="theme-toggle-btn" class="w-full text-left font-semibold text-xs text-slate-400 hover:text-white flex items-center gap-1.5 mb-3 cursor-pointer">
+                    <span id="theme-icon">🌙</span> <span id="theme-text">Mode Gelap</span>
+                </button>
                 <a href="{{ route('home') }}" class="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5 mb-3" target="_blank">
                     <span>↗</span> Buka Toko Online
                 </a>

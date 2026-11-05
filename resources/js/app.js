@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMobileNav();
     initBackToTop();
     initToasts();
+    initThemeToggle();
     initPosRegister();
 });
 
@@ -208,6 +209,37 @@ window.showToast = function(message, type = 'info') {
     toast.querySelector('.toast-close').addEventListener('click', removeToast);
     setTimeout(removeToast, 4500);
 };
+
+/**
+ * High-Contrast Dark Mode Toggle for POS & Admin Shell
+ */
+function initThemeToggle() {
+    const isDark = () => document.documentElement.classList.contains('theme-dark');
+    
+    const updateUI = () => {
+        const dark = isDark();
+        const sidebarIcon = document.getElementById('theme-icon');
+        const sidebarText = document.getElementById('theme-text');
+        const posIcon = document.getElementById('pos-theme-icon');
+        const posLabel = document.getElementById('pos-theme-label');
+
+        if (sidebarIcon) sidebarIcon.textContent = dark ? '☀️' : '🌙';
+        if (sidebarText) sidebarText.textContent = dark ? 'Mode Terang' : 'Mode Gelap';
+        if (posIcon) posIcon.textContent = dark ? '☀️' : '🌙';
+        if (posLabel) posLabel.textContent = dark ? 'Terang' : 'Gelap';
+    };
+
+    const toggleTheme = () => {
+        const nextIsDark = !isDark();
+        document.documentElement.classList.toggle('theme-dark', nextIsDark);
+        localStorage.setItem('varstore_theme', nextIsDark ? 'dark' : 'light');
+        updateUI();
+    };
+
+    document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
+    document.getElementById('pos-theme-toggle')?.addEventListener('click', toggleTheme);
+    updateUI();
+}
 
 /**
  * Modern POS Register Terminal Controller

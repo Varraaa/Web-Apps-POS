@@ -1850,3 +1850,186 @@
     gap: 0.75rem;
 }
 
+/* ==========================================================================
+   HIGH-CONTRAST OLED DARK MODE FOR POS TERMINAL & ADMIN SHELL
+   ========================================================================== */
+html.theme-dark,
+body.theme-dark {
+    background-color: #0b0f17 !important;
+    color: #e2e8f0 !important;
+}
+
+.theme-dark .admin-layout {
+    background-color: #0b0f17;
+}
+
+.theme-dark .admin-sidebar {
+    background-color: #080c13;
+    border-right-color: #1e293b;
+}
+
+.theme-dark .admin-main {
+    background-color: #0b0f17;
+}
+
+.theme-dark .admin-header {
+    background-color: #0f172a;
+    border-bottom-color: #1e293b;
+    color: #f8fafc;
+}
+
+.theme-dark .pos-container {
+    background-color: #0b0f17;
+}
+
+.theme-dark .pos-topbar {
+    background-color: #111827;
+    border-color: #1f2937;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.theme-dark .pos-title {
+    color: #f9fafb;
+}
+
+.theme-dark .pos-subtitle {
+    color: #9ca3af;
+}
+
+.theme-dark .pos-catalog-panel,
+.theme-dark .pos-ticket-panel {
+    background-color: #111827;
+    border-color: #1f2937;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.theme-dark .pos-search-bar {
+    background-color: #111827;
+    border-color: #1f2937;
+}
+
+.theme-dark .pos-input-search {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+.theme-dark .pos-cat-pill {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #d1d5db;
+}
+
+.theme-dark .pos-cat-pill.active {
+    background-color: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.theme-dark .pos-product-card {
+    background-color: #182234;
+    border-color: #243046;
+}
+
+.theme-dark .pos-product-card:hover {
+    border-color: #10b981;
+}
+
+.theme-dark .pos-product-name {
+    color: #f9fafb;
+}
+
+.theme-dark .pos-current-price {
+    color: #34d399;
+}
+
+.theme-dark .pos-ticket-header {
+    background-color: #111827;
+    border-color: #1f2937;
+}
+
+.theme-dark .pos-ticket-title {
+    color: #f9fafb;
+}
+
+.theme-dark .ticket-item-row {
+    background-color: #182234;
+    border-color: #243046;
+}
+
+.theme-dark .ticket-item-title {
+    color: #f9fafb;
+}
+
+.theme-dark .ticket-item-subtotal {
+    color: #34d399;
+}
+
+.theme-dark .ticket-qty-btn {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+.theme-dark .ticket-qty-val {
+    color: #f9fafb;
+}
+
+.theme-dark .pos-ticket-summary {
+    background-color: #111827;
+    border-color: #1f2937;
+}
+
+.theme-dark .pos-btn-pay {
+    background-color: #10b981;
+    color: #ffffff;
+}
+
+.theme-dark .pos-btn-pay:hover:not(:disabled) {
+    background-color: #059669;
+}
+
+.theme-dark .pos-modal-card {
+    background-color: #111827;
+    border: 1px solid #1f2937;
+    color: #f9fafb;
+}
+
+.theme-dark .pos-modal-header {
+    border-color: #1f2937;
+}
+
+.theme-dark .pos-modal-footer {
+    background-color: #0f172a;
+    border-color: #1f2937;
+}
+
+.theme-dark .pos-input-field {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+.theme-dark .bg-white {
+    background-color: #111827 !important;
+}
+
+.theme-dark .bg-slate-50 {
+    background-color: #182234 !important;
+}
+
+.theme-dark .border-slate-200,
+.theme-dark .border-slate-100 {
+    border-color: #1f2937 !important;
+}
+
+.theme-dark .text-slate-900,
+.theme-dark .text-slate-800 {
+    color: #f9fafb !important;
+}
+
+.theme-dark .text-slate-700,
+.theme-dark .text-slate-600 {
+    color: #cbd5e1 !important;
+}
+
