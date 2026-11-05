@@ -7,6 +7,7 @@ use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminPosController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminReportController;
+use App\Http\Controllers\AdminSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderTrackingController;
@@ -64,4 +65,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
     Route::get('/reports', [AdminReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export-csv', [AdminReportController::class, 'exportCsv'])->name('reports.export-csv');
+    Route::get('/settings', [AdminSettingController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [AdminSettingController::class, 'update'])->name('settings.update');
 });

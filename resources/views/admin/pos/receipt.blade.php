@@ -163,10 +163,10 @@
 
     <div class="receipt-card">
         <div class="receipt-header">
-            <h1 class="receipt-title">VARSTORE ATELIER</h1>
-            <p class="receipt-sub">HAUTE POS & READY-TO-WEAR</p>
-            <p class="receipt-sub">Jl. Senopati No. 45, Jakarta Selatan</p>
-            <p class="receipt-sub">WA: 0812-9757-7567</p>
+            <h1 class="receipt-title">{{ \App\Models\StoreSetting::get('store_name', 'VARSTORE APPAREL') }}</h1>
+            <p class="receipt-sub">{{ \App\Models\StoreSetting::get('store_tagline', 'HAUTE POS & READY-TO-WEAR') }}</p>
+            <p class="receipt-sub">{{ \App\Models\StoreSetting::get('store_address', 'Jl. Braga No. 88, Bandung') }}</p>
+            <p class="receipt-sub">Telp: {{ \App\Models\StoreSetting::get('store_phone', '0812-3456-7890') }} | IG: {{ \App\Models\StoreSetting::get('store_instagram', '@varstore.id') }}</p>
         </div>
 
         <div class="receipt-divider"></div>
@@ -271,9 +271,9 @@
         </div>
 
         <div class="receipt-footer">
-            <p>Terima kasih telah berbelanja di VarStore!</p>
-            <p>Barang dapat ditukar maks. 3 hari setelah transaksi dengan membawa struk fisik ini.</p>
-            <p style="margin-top: 4px;">www.varstore.local · @varstore.id</p>
+            <p>{{ \App\Models\StoreSetting::get('receipt_header', 'Terima kasih telah berbelanja di VarStore!') }}</p>
+            <p>{{ \App\Models\StoreSetting::get('receipt_footer', 'Barang dapat ditukar maks. 3 hari setelah transaksi dengan membawa struk fisik ini.') }}</p>
+            <p style="margin-top: 4px;">{{ \App\Models\StoreSetting::get('store_instagram', '@varstore.id') }}</p>
         </div>
     </div>
 

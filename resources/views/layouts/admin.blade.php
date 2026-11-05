@@ -60,6 +60,10 @@
                     href="{{ route('admin.reports.index') }}">
                     <span>📊</span> Laporan & Rekap
                 </a>
+                <a class="{{ request()->routeIs('admin.settings.*') ? 'admin-nav-active' : '' }}"
+                    href="{{ route('admin.settings.index') }}">
+                    <span>⚙</span> Pengaturan Toko
+                </a>
             </nav>
 
             <div class="admin-sidebar-bottom">
