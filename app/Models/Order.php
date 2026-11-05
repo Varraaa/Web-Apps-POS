@@ -15,6 +15,7 @@ class Order extends Model
     protected $fillable = [
         'invoice_number',
         'user_id',
+        'customer_id',
         'customer_name',
         'customer_phone',
         'shipping_address',
@@ -26,6 +27,9 @@ class Order extends Model
         'payment_method',
         'amount_paid',
         'change_amount',
+        'points_earned',
+        'points_redeemed',
+        'points_discount_amount',
         'cashier_name',
         'source',
         'notes',
@@ -40,12 +44,20 @@ class Order extends Model
             'total' => 'decimal:2',
             'amount_paid' => 'decimal:2',
             'change_amount' => 'decimal:2',
+            'points_earned' => 'integer',
+            'points_redeemed' => 'integer',
+            'points_discount_amount' => 'decimal:2',
         ];
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function items(): HasMany

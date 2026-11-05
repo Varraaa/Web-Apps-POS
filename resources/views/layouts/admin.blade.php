@@ -52,6 +52,10 @@
                     href="{{ route('admin.discounts.index') }}">
                     <span>🏷</span> Voucher Diskon
                 </a>
+                <a class="{{ request()->routeIs('admin.customers.*') ? 'admin-nav-active' : '' }}"
+                    href="{{ route('admin.customers.index') }}">
+                    <span>👥</span> Member & Pelanggan
+                </a>
             </nav>
 
             <div class="admin-sidebar-bottom">
