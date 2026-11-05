@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\StockAdjustment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -87,6 +89,83 @@ class AdminProductController extends Controller
     public function barcodeLabel(Product $product): View
     {
         return view('admin.products.barcode-label', compact('product'));
+    }
+
+    /**
+     * Adjust physical product inventory stock (Opname Stok).
+     */
+    public function adjustStock(Request $request, Product $product): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'type' => ['required', 'in:in,out,damage,loss,opname_correction'],
+            'quantity' => ['required', 'integer', 'min:0'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $type = $validated['type'];
+        $qty = (int) $validated['quantity'];
+        $stockBefore = (int) $product->stock;
+
+        $stockAfter = match ($type) {
+            'in' => $stockBefore + $qty,
+            'out', 'damage', 'loss' => max(0, $stockBefore - $qty),
+            'opname_correction' => $qty,
+        };
+
+        $adjustment = StockAdjustment::create([
+            'product_id' => $product->id,
+            'type' => $type,
+            'quantity' => $qty,
+            'stock_before' => $stockBefore,
+            'stock_after' => $stockAfter,
+            'reason' => $validated['reason'],
+            'adjusted_by' => $request->user()?->name ?? 'Kasir / Store Staff',
+        ]);
+
+        $product->update(['stock' => $stockAfter]);
+
+        $message = "Stok untuk {$product->name} berhasil disesuaikan ({$adjustment->type_label}): dari {$stockBefore} pcs menjadi {$stockAfter} pcs.";
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
+                'product_id' => $product->id,
+            ]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Retrieve stock audit history for a product.
+     */
+    public function stockHistory(Product $product): JsonResponse
+    {
+        $history = $product->stockAdjustments()->take(20)->get();
+
+        return response()->json([
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'current_stock' => $product->stock,
+            ],
+            'history' => $history->map(fn ($h) => [
+                'id' => $h->id,
+                'type' => $h->type,
+                'type_label' => $h->type_label,
+                'quantity' => $h->quantity,
+                'stock_before' => $h->stock_before,
+                'stock_after' => $h->stock_after,
+                'reason' => $h->reason,
+                'adjusted_by' => $h->adjusted_by,
+                'created_at' => $h->created_at->format('d M Y, H:i'),
+                'time_ago' => $h->created_at->diffForHumans(),
+            ]),
+        ]);
     }
 
     private function validated(Request $request, ?Product $product = null): array

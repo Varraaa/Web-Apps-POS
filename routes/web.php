@@ -49,6 +49,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/pos/shift/close', [AdminPosController::class, 'closeShift'])->name('pos.shift.close');
     Route::get('/pos/shift/{shift}/z-report', [AdminPosController::class, 'zReport'])->name('pos.shift.z-report');
     Route::get('/products/{product}/barcode-label', [AdminProductController::class, 'barcodeLabel'])->name('products.barcode-label');
+    Route::post('/products/{product}/adjust-stock', [AdminProductController::class, 'adjustStock'])->name('products.adjust-stock');
+    Route::get('/products/{product}/stock-history', [AdminProductController::class, 'stockHistory'])->name('products.stock-history');
     Route::resource('products', AdminProductController::class)->except(['show']);
     Route::resource('discounts', AdminDiscountController::class)->except(['show']);
     Route::patch('/discounts/{discount}/toggle', [AdminDiscountController::class, 'toggle'])->name('discounts.toggle');

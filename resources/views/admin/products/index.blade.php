@@ -144,7 +144,13 @@
 
                             <!-- Actions -->
                             <td class="p-4 text-right">
-                                <div class="flex items-center justify-end gap-2">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <button type="button" class="btn-open-stock-modal pos-btn-ghost text-[11px] py-1 px-2 text-slate-700"
+                                            data-id="{{ $product->id }}" 
+                                            data-name="{{ $product->name }}" 
+                                            data-stock="{{ $product->stock }}">
+                                        📦 Opname
+                                    </button>
                                     <a href="{{ route('admin.products.barcode-label', $product) }}" target="_blank" 
                                        class="pos-btn-ghost text-[11px] py-1 px-2" title="Cetak Label Barcode">
                                         🏷 Label
@@ -179,4 +185,166 @@
         {{ $products->links() }}
     </div>
 </div>
+
+<!-- Stock Opname & Adjustment Modal -->
+<div id="stock-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-lg">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900">Opname Stok & Penyesuaian Inventaris</h3>
+                <p class="text-xs text-slate-500" id="stock-modal-product-name">Penyesuaian stok produk fisik.</p>
+            </div>
+            <button type="button" id="close-stock-modal" class="pos-modal-close-btn">&times;</button>
+        </div>
+
+        <form id="stock-adjust-form" method="POST" action="" class="pos-modal-body space-y-4">
+            @csrf
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs">
+                <div>
+                    <span class="text-slate-500 block">Stok Sistem Saat Ini:</span>
+                    <strong id="stock-modal-current" class="text-base font-mono font-bold text-slate-900">0 pcs</strong>
+                </div>
+                <div class="text-right">
+                    <span class="text-slate-500 block">Estimasi Stok Akhir:</span>
+                    <strong id="stock-modal-result" class="text-base font-mono font-bold text-emerald-600">0 pcs</strong>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Penyesuaian</label>
+                <select name="type" id="adjust-type" class="pos-input-field text-xs font-semibold" required>
+                    <option value="in">Stok Masuk (+) — Pengiriman dari Suplier / Tambah Stok</option>
+                    <option value="out">Stok Keluar (-) — Pengambilan Sampel / Keperluan Internal</option>
+                    <option value="damage">Barang Rusak / Reject (-) — Cacat Jahitan / Robek</option>
+                    <option value="loss">Barang Hilang (-) — Selisih Minus Inventaris</option>
+                    <option value="opname_correction">Koreksi Opname Fisik (=) — Samakan dengan Hitungan Fisik</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                    <span id="adjust-qty-label">Jumlah / Kuantitas (pcs)</span>
+                </label>
+                <input type="number" name="quantity" id="adjust-qty" class="pos-input-field text-sm font-mono font-bold" 
+                       min="0" value="1" required>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Alasan Penyesuaian (Audit Log)</label>
+                <input type="text" name="reason" id="adjust-reason" class="pos-input-field text-xs" 
+                       placeholder="Contoh: Restok 2 lusin dari vendor Bandung / Reject kancing lepas" required>
+            </div>
+
+            <!-- Audit History Table -->
+            <div class="border-t border-slate-200 pt-3">
+                <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2">Riwayat Audit Stok Terbaru</span>
+                <div class="max-h-36 overflow-y-auto border border-slate-100 rounded-lg">
+                    <table class="w-full text-[11px] text-left">
+                        <thead class="bg-slate-50 text-slate-500 font-bold sticky top-0">
+                            <tr>
+                                <th class="p-2">Waktu</th>
+                                <th class="p-2">Tipe</th>
+                                <th class="p-2 text-center">Qty</th>
+                                <th class="p-2 text-center">Stok</th>
+                                <th class="p-2">Alasan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-history-tbody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-slate-400">Memuat riwayat...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="pos-modal-footer pt-2">
+                <button type="submit" class="pos-btn-pay w-full justify-center text-xs">
+                    Simpan Perubahan Stok ✓
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const stockModal = document.getElementById('stock-modal');
+    const closeBtn = document.getElementById('close-stock-modal');
+    const form = document.getElementById('stock-adjust-form');
+    const nameLabel = document.getElementById('stock-modal-product-name');
+    const currentLabel = document.getElementById('stock-modal-current');
+    const resultLabel = document.getElementById('stock-modal-result');
+    const typeSelect = document.getElementById('adjust-type');
+    const qtyInput = document.getElementById('adjust-qty');
+    const historyTbody = document.getElementById('stock-history-tbody');
+
+    let currentStock = 0;
+
+    const calculateEstimatedStock = () => {
+        const type = typeSelect.value;
+        const qty = parseInt(qtyInput.value, 10) || 0;
+        let final = currentStock;
+
+        if (type === 'in') {
+            final = currentStock + qty;
+        } else if (['out', 'damage', 'loss'].includes(type)) {
+            final = Math.max(0, currentStock - qty);
+        } else if (type === 'opname_correction') {
+            final = qty;
+        }
+
+        resultLabel.textContent = `${final} pcs`;
+    };
+
+    typeSelect?.addEventListener('change', calculateEstimatedStock);
+    qtyInput?.addEventListener('input', calculateEstimatedStock);
+
+    document.querySelectorAll('.btn-open-stock-modal').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            const name = btn.dataset.name;
+            currentStock = parseInt(btn.dataset.stock, 10);
+
+            nameLabel.textContent = `${name} (ID #${id})`;
+            currentLabel.textContent = `${currentStock} pcs`;
+            form.action = `/admin/products/${id}/adjust-stock`;
+            qtyInput.value = 1;
+            calculateEstimatedStock();
+
+            // Fetch history
+            historyTbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Memuat riwayat...</td></tr>';
+            stockModal.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/admin/products/${id}/stock-history`);
+                const data = await res.json();
+                if (data.history && data.history.length > 0) {
+                    historyTbody.innerHTML = '';
+                    data.history.forEach(h => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-50 text-[10px]';
+                        tr.innerHTML = `
+                            <td class="p-2 text-slate-500">${h.time_ago}</td>
+                            <td class="p-2 font-bold">${h.type_label}</td>
+                            <td class="p-2 text-center font-mono">${h.quantity}</td>
+                            <td class="p-2 text-center font-mono">${h.stock_before} → <strong>${h.stock_after}</strong></td>
+                            <td class="p-2 text-slate-600 truncate max-w-[120px]" title="${h.reason}">${h.reason}</td>
+                        `;
+                        historyTbody.appendChild(tr);
+                    });
+                } else {
+                    historyTbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada audit penyesuaian stok.</td></tr>';
+                }
+            } catch (e) {
+                historyTbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-rose-500">Gagal memuat log audit.</td></tr>';
+            }
+        });
+    });
+
+    closeBtn?.addEventListener('click', () => {
+        stockModal.classList.add('hidden');
+    });
+});
+</script>
 @endsection

@@ -95,6 +95,11 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function stockAdjustments(): HasMany
+    {
+        return $this->hasMany(StockAdjustment::class)->latest();
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Product $product): void {
