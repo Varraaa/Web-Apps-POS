@@ -38,7 +38,7 @@ class Customer extends Model
 
     public function getFormattedTotalSpentAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->total_spent, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->total_spent, 0, ',', '.');
     }
 
     public function getTierLabelAttribute(): string
@@ -83,7 +83,7 @@ class Customer extends Model
     {
         static::creating(function (Customer $customer): void {
             if (empty($customer->member_code)) {
-                $customer->member_code = 'MBR-' . strtoupper(Str::random(6));
+                $customer->member_code = 'MBR-'.strtoupper(Str::random(6));
             }
         });
     }

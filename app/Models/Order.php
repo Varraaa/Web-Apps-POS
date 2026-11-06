@@ -25,6 +25,10 @@ class Order extends Model
         'total',
         'status',
         'payment_method',
+        'is_split_payment',
+        'secondary_payment_method',
+        'secondary_amount_paid',
+        'payment_breakdown',
         'amount_paid',
         'change_amount',
         'points_earned',
@@ -43,7 +47,10 @@ class Order extends Model
             'discount_amount' => 'decimal:2',
             'total' => 'decimal:2',
             'amount_paid' => 'decimal:2',
+            'secondary_amount_paid' => 'decimal:2',
             'change_amount' => 'decimal:2',
+            'is_split_payment' => 'boolean',
+            'payment_breakdown' => 'array',
             'points_earned' => 'integer',
             'points_redeemed' => 'integer',
             'points_discount_amount' => 'decimal:2',
@@ -72,31 +79,43 @@ class Order extends Model
 
     public function getFormattedTotalAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->total, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->total, 0, ',', '.');
     }
 
     public function getFormattedSubtotalAttribute(): string
     {
-        return 'Rp ' . number_format((float) ($this->subtotal ?? $this->total), 0, ',', '.');
+        return 'Rp '.number_format((float) ($this->subtotal ?? $this->total), 0, ',', '.');
     }
 
     public function getFormattedDiscountAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->discount_amount, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->discount_amount, 0, ',', '.');
     }
 
     public function getFormattedAmountPaidAttribute(): string
     {
-        return 'Rp ' . number_format((float) ($this->amount_paid ?? $this->total), 0, ',', '.');
+        return 'Rp '.number_format((float) ($this->amount_paid ?? $this->total), 0, ',', '.');
     }
 
     public function getFormattedChangeAttribute(): string
     {
-        return 'Rp ' . number_format((float) ($this->change_amount ?? 0), 0, ',', '.');
+        return 'Rp '.number_format((float) ($this->change_amount ?? 0), 0, ',', '.');
     }
 
     public function getPaymentLabelAttribute(): string
     {
+        if ($this->is_split_payment) {
+            $names = [
+                'cash' => 'Tunai',
+                'qris' => 'QRIS',
+                'transfer' => 'Transfer Bank',
+            ];
+            $m1 = $names[$this->payment_method] ?? strtoupper($this->payment_method);
+            $m2 = $names[$this->secondary_payment_method ?? ''] ?? strtoupper($this->secondary_payment_method ?? '');
+
+            return "Split ({$m1} + {$m2})";
+        }
+
         return match ($this->payment_method) {
             'cash' => 'Tunai (Cash)',
             'qris' => 'QRIS Instan',
@@ -122,7 +141,7 @@ class Order extends Model
         static::creating(function (Order $order): void {
             if (empty($order->invoice_number)) {
                 $prefix = $order->source === 'pos' ? 'POS' : 'INV';
-                $order->invoice_number = $prefix . '-' . now()->format('Ymd') . '-' . Str::upper(Str::random(5));
+                $order->invoice_number = $prefix.'-'.now()->format('Ymd').'-'.Str::upper(Str::random(5));
             }
         });
     }

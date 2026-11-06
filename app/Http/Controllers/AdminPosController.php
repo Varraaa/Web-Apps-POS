@@ -76,7 +76,11 @@ class AdminPosController extends Controller
             'redeem_points' => ['nullable', 'boolean'],
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
-            'payment_method' => ['required', 'string', 'in:cash,qris,transfer,whatsapp'],
+            'payment_method' => ['required', 'string', 'in:cash,qris,transfer,whatsapp,split'],
+            'is_split_payment' => ['nullable', 'boolean'],
+            'primary_payment_method' => ['nullable', 'string', 'in:cash,qris,transfer'],
+            'secondary_payment_method' => ['nullable', 'string', 'in:cash,qris,transfer'],
+            'secondary_amount_paid' => ['nullable', 'numeric', 'min:0'],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
             'coupon_code' => ['nullable', 'string', 'max:30'],
             'notes' => ['nullable', 'string', 'max:500'],
@@ -153,13 +157,31 @@ class AdminPosController extends Controller
                 }
 
                 $total = max(0.0, $totalAfterCoupon - $pointsDiscountAmount);
-                $amountPaid = isset($data['amount_paid']) ? (float) $data['amount_paid'] : $total;
 
-                if ($paymentMethod === 'cash' && $amountPaid < $total) {
-                    throw new \RuntimeException('Jumlah uang tunai yang dibayarkan kurang dari total tagihan.');
+                $isSplit = ($paymentMethod === 'split') || (! empty($data['is_split_payment']));
+                $primaryMethod = $isSplit ? ($data['primary_payment_method'] ?? 'cash') : $paymentMethod;
+                $secondaryMethod = $isSplit ? ($data['secondary_payment_method'] ?? 'qris') : null;
+                $secondaryAmountPaid = $isSplit ? (float) ($data['secondary_amount_paid'] ?? 0) : null;
+                $primaryAmountPaid = isset($data['amount_paid']) ? (float) $data['amount_paid'] : ($isSplit ? max(0, $total - ($secondaryAmountPaid ?? 0)) : $total);
+
+                $totalPaid = $isSplit ? ($primaryAmountPaid + (float) $secondaryAmountPaid) : $primaryAmountPaid;
+
+                if ($isSplit) {
+                    if ($totalPaid < $total) {
+                        throw new \RuntimeException('Total pembayaran campuran (split payment) kurang dari total tagihan.');
+                    }
+                    $changeAmount = ($primaryMethod === 'cash' || $secondaryMethod === 'cash') ? max(0.0, $totalPaid - $total) : 0.0;
+                    $paymentBreakdown = [
+                        ['method' => $primaryMethod, 'amount' => $primaryAmountPaid],
+                        ['method' => $secondaryMethod, 'amount' => $secondaryAmountPaid],
+                    ];
+                } else {
+                    if ($primaryMethod === 'cash' && $primaryAmountPaid < $total) {
+                        throw new \RuntimeException('Jumlah uang tunai yang dibayarkan kurang dari total tagihan.');
+                    }
+                    $changeAmount = ($primaryMethod === 'cash') ? max(0.0, $primaryAmountPaid - $total) : 0.0;
+                    $paymentBreakdown = null;
                 }
-
-                $changeAmount = ($paymentMethod === 'cash') ? max(0.0, $amountPaid - $total) : 0.0;
 
                 // Points earned for this purchase: 1 point per Rp 10.000 spent
                 $pointsEarned = $customer ? (int) floor($total / 10000) : 0;
@@ -177,8 +199,12 @@ class AdminPosController extends Controller
                     'points_redeemed' => $pointsRedeemed,
                     'points_discount_amount' => $pointsDiscountAmount,
                     'total' => $total,
-                    'payment_method' => $paymentMethod,
-                    'amount_paid' => $amountPaid,
+                    'payment_method' => $primaryMethod,
+                    'is_split_payment' => $isSplit,
+                    'secondary_payment_method' => $secondaryMethod,
+                    'secondary_amount_paid' => $secondaryAmountPaid,
+                    'payment_breakdown' => $paymentBreakdown,
+                    'amount_paid' => $primaryAmountPaid,
                     'change_amount' => $changeAmount,
                     'cashier_name' => $request->user()?->name ?? 'Kasir VarStore',
                     'source' => 'pos',

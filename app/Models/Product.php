@@ -66,12 +66,12 @@ class Product extends Model
 
     public function getFormattedPriceAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->price, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->price, 0, ',', '.');
     }
 
     public function getFormattedFinalPriceAttribute(): string
     {
-        return 'Rp ' . number_format($this->final_price, 0, ',', '.');
+        return 'Rp '.number_format($this->final_price, 0, ',', '.');
     }
 
     public function getHasWholesalePriceAttribute(): bool
@@ -81,7 +81,7 @@ class Product extends Model
 
     public function getFormattedWholesalePriceAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->wholesale_price, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->wholesale_price, 0, ',', '.');
     }
 
     public function getPriceForQuantity(int $quantity): float
@@ -129,10 +129,10 @@ class Product extends Model
             $product->slug = $product->slug ?: Str::slug($product->name).'-'.Str::lower(Str::random(5));
             if (empty($product->sku)) {
                 $categoryCode = Str::upper(substr($product->category, 0, 3));
-                $product->sku = "VAR-{$categoryCode}-" . strtoupper(Str::random(4));
+                $product->sku = "VAR-{$categoryCode}-".strtoupper(Str::random(4));
             }
             if (empty($product->barcode)) {
-                $product->barcode = '899' . mt_rand(100000000, 999999999);
+                $product->barcode = '899'.mt_rand(100000000, 999999999);
             }
         });
     }

@@ -228,7 +228,22 @@
             <span class="meta-val">{{ $order->payment_label }}</span>
         </div>
 
-        @if($order->payment_method === 'cash')
+        @if($order->is_split_payment && $order->payment_breakdown)
+            <div class="meta-row">
+                <span class="meta-label">Pembayaran 1 ({{ strtoupper($order->payment_breakdown['primary']['method'] ?? 'TUNAI') }}):</span>
+                <span class="meta-val">Rp {{ number_format($order->payment_breakdown['primary']['amount'] ?? 0, 0, ',', '.') }}</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Pembayaran 2 ({{ strtoupper($order->payment_breakdown['secondary']['method'] ?? 'DIGITAL') }}):</span>
+                <span class="meta-val">Rp {{ number_format($order->payment_breakdown['secondary']['amount'] ?? 0, 0, ',', '.') }}</span>
+            </div>
+            @if(($order->change_amount ?? 0) > 0)
+                <div class="meta-row">
+                    <span class="meta-label">Kembalian:</span>
+                    <span class="meta-val">Rp {{ number_format($order->change_amount ?? 0, 0, ',', '.') }}</span>
+                </div>
+            @endif
+        @elseif($order->payment_method === 'cash')
             <div class="meta-row">
                 <span class="meta-label">Tunai Diterima:</span>
                 <span class="meta-val">Rp {{ number_format($order->amount_paid ?? $order->total, 0, ',', '.') }}</span>

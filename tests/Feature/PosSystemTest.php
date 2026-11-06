@@ -367,4 +367,48 @@ class PosSystemTest extends TestCase
         $this->assertEmpty(session('wishlist'));
         $this->assertArrayHasKey($product->id, session('cart'));
     }
+
+    public function test_pos_split_payment_records_multiple_tenders_and_breakdown(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'price' => 100000,
+            'stock' => 5,
+            'discount_percent' => 0,
+        ]);
+
+        $payload = [
+            'customer_name' => 'Doni Multi',
+            'customer_phone' => '081234567890',
+            'payment_method' => 'split',
+            'is_split_payment' => true,
+            'amount_paid' => 40000,
+            'secondary_payment_method' => 'qris',
+            'secondary_amount_paid' => 60000,
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)
+            ->postJson(route('admin.pos.checkout'), $payload);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('orders', [
+            'customer_name' => 'Doni Multi',
+            'total' => 100000,
+            'is_split_payment' => true,
+            'payment_method' => 'cash',
+            'amount_paid' => 40000,
+            'secondary_payment_method' => 'qris',
+            'secondary_amount_paid' => 60000,
+        ]);
+
+        $order = Order::where('customer_name', 'Doni Multi')->first();
+        $this->assertNotNull($order->payment_breakdown);
+        $this->assertStringContainsString('Tunai', $order->payment_label);
+        $this->assertStringContainsString('QRIS', $order->payment_label);
+    }
 }

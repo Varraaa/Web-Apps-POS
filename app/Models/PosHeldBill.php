@@ -40,6 +40,6 @@ class PosHeldBill extends Model
 
     public function getFormattedSubtotalAttribute(): string
     {
-        return 'Rp ' . number_format((float) $this->subtotal, 0, ',', '.');
+        return 'Rp '.number_format((float) $this->subtotal, 0, ',', '.');
     }
 }

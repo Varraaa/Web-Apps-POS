@@ -279,6 +279,7 @@
                 <button type="button" class="pos-pay-tab active" data-method="cash">💵 Uang Tunai (Cash)</button>
                 <button type="button" class="pos-pay-tab" data-method="qris">📱 QRIS Instan</button>
                 <button type="button" class="pos-pay-tab" data-method="transfer">🏦 Transfer Bank</button>
+                <button type="button" class="pos-pay-tab" data-method="split">🔀 Bayar Campuran (Split)</button>
             </div>
 
             <!-- Tab 1: Cash Pane -->
@@ -345,6 +346,43 @@
                             <small class="text-slate-500 text-[10px]">a.n VarStore Indonesia</small>
                         </div>
                         <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold">Siap Pakai</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Split Payment Pane -->
+            <div class="pos-pay-pane hidden" id="pane-split">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    <div class="text-[11px] text-slate-500 font-medium">Bagi total tagihan ke dua metode pembayaran berbeda (misal Tunai + QRIS).</div>
+                    <div>
+                        <div class="flex items-center justify-between text-xs mb-1">
+                            <span class="font-bold text-slate-700">Metode Utama</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800">💵 Uang Tunai</span>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-xs">Rp</span>
+                            <input type="number" id="pos-split-primary-amount" class="w-full pl-9 pr-3 py-2 text-sm font-bold rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none" placeholder="0" min="0" step="1000">
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-200">
+                        <div class="flex items-center justify-between text-xs mb-1">
+                            <span class="font-bold text-slate-700">Metode Sekunder</span>
+                            <select id="pos-split-secondary-method" class="text-xs font-semibold py-1 px-2 border border-slate-300 rounded bg-white focus:outline-none">
+                                <option value="qris">📱 QRIS Instan</option>
+                                <option value="transfer">🏦 Transfer Bank</option>
+                            </select>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-xs">Rp</span>
+                            <input type="number" id="pos-split-secondary-amount" class="w-full pl-9 pr-3 py-2 text-sm font-bold rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none" placeholder="0" min="0" step="1000">
+                        </div>
+                    </div>
+
+                    <!-- Split Balance Status -->
+                    <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                        <span class="text-slate-600 font-medium">Sisa Tagihan Belum Terpenuhi:</span>
+                        <strong class="text-sm font-black text-rose-600" id="pos-split-remaining">Rp 0</strong>
                     </div>
                 </div>
             </div>

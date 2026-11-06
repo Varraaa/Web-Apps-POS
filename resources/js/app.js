@@ -363,6 +363,7 @@ function initPosRegister() {
         cash: document.getElementById('pane-cash'),
         qris: document.getElementById('pane-qris'),
         transfer: document.getElementById('pane-transfer'),
+        split: document.getElementById('pane-split'),
     };
     const cashInput = document.getElementById('pos-cash-input');
     const cashChangeDisplay = document.getElementById('pos-cash-change');
@@ -1117,6 +1118,46 @@ function initPosRegister() {
         });
     });
 
+    // Split Payment Elements
+    const splitPrimaryInput = document.getElementById('pos-split-primary-amount');
+    const splitSecondaryInput = document.getElementById('pos-split-secondary-amount');
+    const splitSecondaryMethod = document.getElementById('pos-split-secondary-method');
+    const splitRemainingDisplay = document.getElementById('pos-split-remaining');
+
+    const updateSplitCalculation = () => {
+        const { grandTotal } = calculateTotals();
+        const primary = parseFloat(splitPrimaryInput?.value) || 0;
+        const secondary = parseFloat(splitSecondaryInput?.value) || 0;
+        const totalPaid = primary + secondary;
+        const remaining = Math.max(0, grandTotal - totalPaid);
+
+        if (splitRemainingDisplay) {
+            splitRemainingDisplay.textContent = formatRp(remaining);
+            if (remaining > 0) {
+                splitRemainingDisplay.classList.remove('text-emerald-600');
+                splitRemainingDisplay.classList.add('text-rose-600');
+                submitTransactionBtn.disabled = true;
+                submitTransactionBtn.innerHTML = `<span>Pembayaran Campuran Masih Kurang (${formatRp(remaining)})</span>`;
+            } else {
+                splitRemainingDisplay.classList.remove('text-rose-600');
+                splitRemainingDisplay.classList.add('text-emerald-600');
+                submitTransactionBtn.disabled = false;
+                submitTransactionBtn.innerHTML = `<span>Konfirmasi Pembayaran Selesai ✓</span>`;
+            }
+        }
+    };
+
+    splitPrimaryInput?.addEventListener('input', () => {
+        const { grandTotal } = calculateTotals();
+        const primary = parseFloat(splitPrimaryInput.value) || 0;
+        if (splitSecondaryInput && (primary <= grandTotal)) {
+            splitSecondaryInput.value = Math.max(0, grandTotal - primary);
+        }
+        updateSplitCalculation();
+    });
+
+    splitSecondaryInput?.addEventListener('input', updateSplitCalculation);
+
     // Payment method tabs
     payTabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -1130,7 +1171,13 @@ function initPosRegister() {
                 }
             });
 
-            if (paymentMethod !== 'cash') {
+            if (paymentMethod === 'split') {
+                const { grandTotal } = calculateTotals();
+                const half = Math.floor(grandTotal / 2);
+                if (splitPrimaryInput) splitPrimaryInput.value = half;
+                if (splitSecondaryInput) splitSecondaryInput.value = grandTotal - half;
+                updateSplitCalculation();
+            } else if (paymentMethod !== 'cash') {
                 const { grandTotal } = calculateTotals();
                 cashInput.value = grandTotal;
                 submitTransactionBtn.disabled = false;
@@ -1171,6 +1218,22 @@ function initPosRegister() {
             return;
         }
 
+        const isSplit = paymentMethod === 'split';
+        let amountPaid = paid;
+        let secondaryMethod = null;
+        let secondaryAmount = null;
+
+        if (isSplit) {
+            amountPaid = parseFloat(splitPrimaryInput?.value) || 0;
+            secondaryAmount = parseFloat(splitSecondaryInput?.value) || 0;
+            secondaryMethod = splitSecondaryMethod?.value || 'qris';
+            if ((amountPaid + secondaryAmount) < grandTotal) {
+                posAudio.warning();
+                alert('Total pembayaran campuran (split payment) masih kurang dari total tagihan.');
+                return;
+            }
+        }
+
         const customerName = document.getElementById('pos-customer-name')?.value || 'Pelanggan Walk-In';
         const customerPhone = document.getElementById('pos-customer-phone')?.value || '-';
         const notes = document.getElementById('pos-notes-input')?.value || '';
@@ -1193,8 +1256,11 @@ function initPosRegister() {
                     redeem_points: redeemPointsCheck?.checked ? true : false,
                     customer_name: activeCustomer ? activeCustomer.name : customerName,
                     customer_phone: activeCustomer ? (activeCustomer.phone || '-') : customerPhone,
-                    payment_method: paymentMethod,
-                    amount_paid: paid,
+                    payment_method: isSplit ? 'split' : paymentMethod,
+                    is_split_payment: isSplit,
+                    amount_paid: amountPaid,
+                    secondary_payment_method: secondaryMethod,
+                    secondary_amount_paid: secondaryAmount,
                     coupon_code: appliedCoupon?.code || null,
                     notes: notes,
                     items: ticket.map(t => ({

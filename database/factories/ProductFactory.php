@@ -24,7 +24,7 @@ class ProductFactory extends Factory
 
         return [
             'name' => ucfirst($name),
-            'slug' => Str::slug($name) . '-' . Str::lower(Str::random(5)),
+            'slug' => Str::slug($name).'-'.Str::lower(Str::random(5)),
             'category' => fake()->randomElement(['Outerwear', 'Tops', 'Bottoms', 'Accessories']),
             'description' => fake()->sentence(12),
             'price' => fake()->randomElement([150000, 250000, 399000, 599000]),
