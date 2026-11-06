@@ -6,6 +6,7 @@ use App\Models\CashierShift;
 use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Order;
+use App\Models\OrderReturn;
 use App\Models\PosHeldBill;
 use App\Models\Product;
 use App\Models\StoreSetting;
@@ -410,5 +411,67 @@ class PosSystemTest extends TestCase
         $this->assertNotNull($order->payment_breakdown);
         $this->assertStringContainsString('Tunai', $order->payment_label);
         $this->assertStringContainsString('QRIS', $order->payment_label);
+    }
+
+    public function test_admin_can_process_order_return_with_restock(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'price' => 50000,
+            'stock' => 8,
+        ]);
+
+        $order = Order::create([
+            'customer_name' => 'Budi Retur',
+            'customer_phone' => '081234567890',
+            'shipping_address' => 'Di Tempat',
+            'total' => 100000,
+            'subtotal' => 100000,
+            'payment_method' => 'cash',
+            'status' => 'completed',
+            'source' => 'pos',
+        ]);
+        $item = $order->items()->create([
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'quantity' => 2,
+            'price' => 50000,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->post(route('admin.orders.returns.store', $order), [
+                'order_item_id' => $item->id,
+                'quantity' => 1,
+                'refund_amount' => 50000,
+                'reason' => 'wrong_size',
+                'condition' => 'intact_with_tags',
+                'refund_type' => 'cash',
+                'restock_item' => 1,
+                'notes' => 'Tukar size karena kekecilan',
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('order_returns', [
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'refund_amount' => 50000,
+            'refund_type' => 'cash',
+            'restock_item' => true,
+        ]);
+
+        // Product stock increased from 8 to 9
+        $this->assertEquals(9, $product->fresh()->stock);
+
+        // Verify returns index and slip
+        $indexResponse = $this->actingAs($admin)->get(route('admin.returns.index'));
+        $indexResponse->assertOk();
+        $indexResponse->assertSee('Retur &amp; Penukaran', false);
+
+        $return = OrderReturn::first();
+        $slipResponse = $this->actingAs($admin)->get(route('admin.returns.slip', $return));
+        $slipResponse->assertOk();
+        $slipResponse->assertSee('BUKTI RETUR');
     }
 }

@@ -53,6 +53,10 @@
                     href="{{ route('admin.orders.index') }}">
                     <span>□</span> Pesanan & Transaksi
                 </a>
+                <a class="{{ request()->routeIs('admin.returns.*') ? 'admin-nav-active' : '' }}"
+                    href="{{ route('admin.returns.index') }}">
+                    <span>↩</span> Retur & Penukaran
+                </a>
                 <a class="{{ request()->routeIs('admin.discounts.*') ? 'admin-nav-active' : '' }}"
                     href="{{ route('admin.discounts.index') }}">
                     <span>🏷</span> Voucher Diskon

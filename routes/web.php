@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminCustomerController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminDiscountController;
 use App\Http\Controllers\AdminOrderController;
+use App\Http\Controllers\AdminOrderReturnController;
 use App\Http\Controllers\AdminPosController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminReportController;
@@ -67,6 +68,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::get('/orders/{order}/packing-slip', [AdminOrderController::class, 'packingSlip'])->name('orders.packing-slip');
     Route::patch('/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
+    Route::get('/returns', [AdminOrderReturnController::class, 'index'])->name('returns.index');
+    Route::post('/orders/{order}/returns', [AdminOrderReturnController::class, 'store'])->name('orders.returns.store');
+    Route::get('/returns/{orderReturn}', [AdminOrderReturnController::class, 'show'])->name('returns.show');
+    Route::get('/returns/{orderReturn}/slip', [AdminOrderReturnController::class, 'slip'])->name('returns.slip');
     Route::get('/reports', [AdminReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export-csv', [AdminReportController::class, 'exportCsv'])->name('reports.export-csv');
     Route::get('/settings', [AdminSettingController::class, 'index'])->name('settings.index');

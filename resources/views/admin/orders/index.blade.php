@@ -275,13 +275,101 @@
         </div>
 
         <div class="pos-modal-footer justify-between">
-            <a href="#" id="detail-btn-receipt" target="_blank" class="pos-btn-pay text-xs">
-                🖨 Cetak Struk Kasir
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="#" id="detail-btn-receipt" target="_blank" class="pos-btn-pay text-xs">
+                    🖨 Cetak Struk
+                </a>
+                <button type="button" id="btn-open-return-form" class="pos-btn-ghost text-xs border border-rose-300 text-rose-700 hover:bg-rose-50">
+                    ↩ Proses Retur
+                </button>
+            </div>
             <button type="button" id="btn-dismiss-detail-modal" class="pos-btn-ghost text-xs">
                 Tutup
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Order Return Modal -->
+<div id="order-return-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-lg">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-base font-black text-slate-900" id="return-modal-title">Form Retur Barang</h3>
+                <p class="text-xs text-slate-500">Pilih barang yang diretur, kondisi fisik, dan nominal pengembalian dana.</p>
+            </div>
+            <button type="button" id="btn-close-return-modal" class="pos-modal-close-btn">&times;</button>
+        </div>
+        <form id="order-return-form" method="POST" action="">
+            @csrf
+            <div class="pos-modal-body space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Produk yang Diretur</label>
+                    <select name="order_item_id" id="return-item-select" required class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Jumlah Item (Qty)</label>
+                        <input type="number" name="quantity" id="return-qty" value="1" min="1" required class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nominal Refund (Rp)</label>
+                        <input type="number" name="refund_amount" id="return-amount" value="0" min="0" step="1000" required class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Kondisi Fisik Barang</label>
+                        <select name="condition" required class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                            <option value="intact_with_tags">Utuh & Tag Lengkap (Layak Jual)</option>
+                            <option value="opened_good">Buka Segel (Kondisi Bagus)</option>
+                            <option value="damaged">Rusak Pemakaian Pelanggan</option>
+                            <option value="defect_factory">Cacat Pabrik / Jahitan Rusak</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Alasan Retur</label>
+                        <select name="reason" required class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                            <option value="wrong_size">Ukuran Tidak Pas / Salah Size</option>
+                            <option value="defective">Cacat / Rusak</option>
+                            <option value="not_as_expected">Tidak Sesuai Ekspektasi</option>
+                            <option value="customer_change_mind">Ingin Ganti Model / Batal</option>
+                            <option value="other">Lainnya</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Metode Pengembalian Kompensasi</label>
+                    <select name="refund_type" required class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                        <option value="cash">Kembali Tunai dari Kasir (Cash)</option>
+                        <option value="store_credit">Saldo Dompet Pelanggan (Store Credit)</option>
+                        <option value="exchange">Tukar Barang Sejenis / Ukuran Lain</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" name="restock_item" id="return-restock" value="1" checked class="rounded border-slate-300">
+                    <label for="return-restock" class="text-xs text-slate-700 font-semibold cursor-pointer">
+                        Kembalikan barang ini ke stok etalase (Restock otomatis)
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Tambahan (Opsional)</label>
+                    <textarea name="notes" rows="2" placeholder="e.g. Pelanggan menukar dari size M ke L" class="w-full text-xs p-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 focus:outline-none"></textarea>
+                </div>
+            </div>
+
+            <div class="pos-modal-footer">
+                <button type="button" id="btn-dismiss-return-modal" class="pos-btn-ghost text-xs">Batal</button>
+                <button type="submit" class="pos-btn-pay text-xs bg-rose-600 hover:bg-rose-700">Simpan & Cetak Bukti Retur ✓</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -306,10 +394,13 @@
         const itemsContainer = document.getElementById('detail-items-container');
         const btnReceipt = document.getElementById('detail-btn-receipt');
 
+        let activeOrderId = null;
+
         document.querySelectorAll('.btn-open-order-detail').forEach(btn => {
             btn.addEventListener('click', () => {
                 const inv = btn.getAttribute('data-invoice');
                 const orderId = btn.getAttribute('data-order-id');
+                activeOrderId = orderId;
                 title.textContent = `Pesanan #${inv}`;
                 sub.textContent = `Waktu Transaksi: ${btn.getAttribute('data-date')}`;
                 custName.textContent = btn.getAttribute('data-customer');
@@ -333,6 +424,7 @@
 
                 // Items list
                 const items = JSON.parse(btn.getAttribute('data-items') || '[]');
+                currentOrderItems = items;
                 itemsContainer.innerHTML = '';
                 items.forEach(it => {
                     const el = document.createElement('div');
@@ -356,6 +448,54 @@
         dismissBtn?.addEventListener('click', closeModal);
         modal?.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
+        });
+
+        // Return Modal Logic
+        const returnModal = document.getElementById('order-return-modal');
+        const btnOpenReturn = document.getElementById('btn-open-return-form');
+        const btnCloseReturn = document.getElementById('btn-close-return-modal');
+        const btnDismissReturn = document.getElementById('btn-dismiss-return-modal');
+        const returnForm = document.getElementById('order-return-form');
+        const returnSelect = document.getElementById('return-item-select');
+        const returnQty = document.getElementById('return-qty');
+        const returnAmount = document.getElementById('return-amount');
+        let currentOrderItems = [];
+
+        btnOpenReturn?.addEventListener('click', () => {
+            if (!activeOrderId) return;
+            returnForm.action = `/admin/orders/${activeOrderId}/returns`;
+            returnSelect.innerHTML = '';
+            currentOrderItems.forEach(it => {
+                const opt = document.createElement('option');
+                opt.value = it.id;
+                opt.dataset.price = it.price;
+                opt.dataset.maxQty = it.quantity;
+                opt.textContent = `${it.product_name} (${it.quantity} pcs @ Rp ${Number(it.price).toLocaleString('id-ID')})`;
+                returnSelect.appendChild(opt);
+            });
+            updateReturnFormValues();
+            returnModal.classList.remove('hidden');
+        });
+
+        const updateReturnFormValues = () => {
+            const selectedOpt = returnSelect.selectedOptions[0];
+            if (!selectedOpt) return;
+            const price = parseFloat(selectedOpt.dataset.price) || 0;
+            const maxQty = parseInt(selectedOpt.dataset.maxQty, 10) || 1;
+            returnQty.max = maxQty;
+            const qty = Math.min(parseInt(returnQty.value, 10) || 1, maxQty);
+            returnQty.value = qty;
+            returnAmount.value = qty * price;
+        };
+
+        returnSelect?.addEventListener('change', updateReturnFormValues);
+        returnQty?.addEventListener('input', updateReturnFormValues);
+
+        const closeReturnModal = () => returnModal.classList.add('hidden');
+        btnCloseReturn?.addEventListener('click', closeReturnModal);
+        btnDismissReturn?.addEventListener('click', closeReturnModal);
+        returnModal?.addEventListener('click', (e) => {
+            if (e.target === returnModal) closeReturnModal();
         });
     });
 </script>
