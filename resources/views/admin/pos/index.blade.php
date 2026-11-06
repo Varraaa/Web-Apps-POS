@@ -179,6 +179,7 @@
                             <div class="flex items-center gap-1.5 mt-0.5">
                                 <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800" id="selected-member-tier">Bronze</span>
                                 <span class="text-[10px] font-bold text-emerald-600" id="selected-member-points">★ 0 Poin</span>
+                                <span class="text-[10px] font-bold text-blue-600" id="selected-member-credit">💳 Rp 0</span>
                             </div>
                         </div>
                         <button type="button" id="pos-remove-member" class="text-xs text-rose-500 font-bold hover:text-rose-700 p-1" title="Hapus member">
@@ -191,6 +192,14 @@
                         <input type="checkbox" id="pos-redeem-points-check" class="rounded text-emerald-600 focus:ring-0">
                         <span class="text-[11px] text-slate-700 font-semibold" id="label-redeem-points">
                             Tukar Poin Belanja (Hemat Rp 0)
+                        </span>
+                    </label>
+
+                    <!-- Store Credit Wallet Toggle -->
+                    <label class="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-slate-200 cursor-pointer select-none" id="row-store-credit-toggle">
+                        <input type="checkbox" id="pos-use-store-credit-check" class="rounded text-blue-600 focus:ring-0">
+                        <span class="text-[11px] text-slate-700 font-semibold" id="label-use-store-credit">
+                            Gunakan Saldo Dompet Toko (Saldo Rp 0)
                         </span>
                     </label>
                 </div>
@@ -239,6 +248,10 @@
                     <div class="pos-summary-row text-emerald-600" id="pos-row-discount" style="display: none;">
                         <span>Diskon (<span id="pos-discount-label">-</span>)</span>
                         <strong id="pos-val-discount">- Rp 0</strong>
+                    </div>
+                    <div class="pos-summary-row text-blue-600" id="pos-row-credit" style="display: none;">
+                        <span>Saldo Dompet Toko</span>
+                        <strong id="pos-val-credit">- Rp 0</strong>
                     </div>
                     <div class="pos-summary-row pos-grand-total">
                         <span>TOTAL TAGIHAN</span>

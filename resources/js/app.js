@@ -333,9 +333,12 @@ function initPosRegister() {
     const selectedMemberName = document.getElementById('selected-member-name');
     const selectedMemberTier = document.getElementById('selected-member-tier');
     const selectedMemberPoints = document.getElementById('selected-member-points');
+    const selectedMemberCredit = document.getElementById('selected-member-credit');
     const removeMemberBtn = document.getElementById('pos-remove-member');
     const redeemPointsCheck = document.getElementById('pos-redeem-points-check');
     const labelRedeemPoints = document.getElementById('label-redeem-points');
+    const useStoreCreditCheck = document.getElementById('pos-use-store-credit-check');
+    const labelUseStoreCredit = document.getElementById('label-use-store-credit');
     const walkinInputs = document.getElementById('pos-walkin-inputs');
 
     const customerModal = document.getElementById('pos-customer-modal');
@@ -351,6 +354,8 @@ function initPosRegister() {
     const discountRow = document.getElementById('pos-row-discount');
     const discountLabel = document.getElementById('pos-discount-label');
     const discountDisplay = document.getElementById('pos-val-discount');
+    const creditRow = document.getElementById('pos-row-credit');
+    const creditDisplay = document.getElementById('pos-val-credit');
     const grandtotalDisplay = document.getElementById('pos-val-grandtotal');
     const payBtn = document.getElementById('pos-btn-open-payment');
 
@@ -446,7 +451,20 @@ function initPosRegister() {
             }
         }
 
-        const grandTotal = Math.max(0, totalAfterCoupon - pointsDiscount);
+        const totalAfterPoints = Math.max(0, totalAfterCoupon - pointsDiscount);
+
+        let creditDeduction = 0;
+        if (activeCustomer && parseFloat(activeCustomer.store_credit || 0) > 0) {
+            const availCredit = parseFloat(activeCustomer.store_credit);
+            if (useStoreCreditCheck && useStoreCreditCheck.checked) {
+                creditDeduction = Math.min(availCredit, totalAfterPoints);
+                if (labelUseStoreCredit) labelUseStoreCredit.textContent = `Gunakan Saldo Dompet (Hemat ${formatRp(creditDeduction)})`;
+            } else if (labelUseStoreCredit) {
+                labelUseStoreCredit.textContent = `Gunakan Saldo Dompet (${formatRp(availCredit)})`;
+            }
+        }
+
+        const grandTotal = Math.max(0, totalAfterPoints - creditDeduction);
 
         // Update UI
         subtotalDisplay.textContent = formatRp(subtotal);
@@ -460,6 +478,13 @@ function initPosRegister() {
             discountDisplay.textContent = '- ' + formatRp(discount + pointsDiscount);
         } else {
             discountRow.style.display = 'none';
+        }
+
+        if (creditDeduction > 0) {
+            if (creditRow) creditRow.style.display = 'flex';
+            if (creditDisplay) creditDisplay.textContent = '- ' + formatRp(creditDeduction);
+        } else {
+            if (creditRow) creditRow.style.display = 'none';
         }
 
         grandtotalDisplay.textContent = formatRp(grandTotal);
@@ -642,11 +667,15 @@ function initPosRegister() {
         selectedMemberName.textContent = `${cust.name} (${cust.member_code})`;
         selectedMemberTier.textContent = cust.tier_label || cust.tier.toUpperCase();
         selectedMemberPoints.textContent = `★ ${cust.points} Poin`;
+        if (selectedMemberCredit) selectedMemberCredit.textContent = `💳 ${cust.formatted_store_credit || formatRp(cust.store_credit || 0)}`;
         selectedMemberCard.classList.remove('hidden');
         walkinInputs.classList.add('hidden');
 
         if (redeemPointsCheck) {
             redeemPointsCheck.checked = false;
+        }
+        if (useStoreCreditCheck) {
+            useStoreCreditCheck.checked = false;
         }
 
         calculateTotals();
@@ -705,11 +734,17 @@ function initPosRegister() {
         selectedMemberCard.classList.add('hidden');
         walkinInputs.classList.remove('hidden');
         if (redeemPointsCheck) redeemPointsCheck.checked = false;
+        if (useStoreCreditCheck) useStoreCreditCheck.checked = false;
         calculateTotals();
         if (window.showToast) window.showToast('Member dilepas dari transaksi.', 'info');
     });
 
     redeemPointsCheck?.addEventListener('change', () => {
+        calculateTotals();
+        updateChangeCalculation();
+    });
+
+    useStoreCreditCheck?.addEventListener('change', () => {
         calculateTotals();
         updateChangeCalculation();
     });
@@ -1254,6 +1289,7 @@ function initPosRegister() {
                 body: JSON.stringify({
                     customer_id: activeCustomer ? activeCustomer.id : null,
                     redeem_points: redeemPointsCheck?.checked ? true : false,
+                    use_store_credit: useStoreCreditCheck?.checked ? true : false,
                     customer_name: activeCustomer ? activeCustomer.name : customerName,
                     customer_phone: activeCustomer ? (activeCustomer.phone || '-') : customerPhone,
                     payment_method: isSplit ? 'split' : paymentMethod,

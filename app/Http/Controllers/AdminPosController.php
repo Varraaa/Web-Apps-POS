@@ -74,6 +74,7 @@ class AdminPosController extends Controller
         $data = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
             'redeem_points' => ['nullable', 'boolean'],
+            'use_store_credit' => ['nullable', 'boolean'],
             'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'payment_method' => ['required', 'string', 'in:cash,qris,transfer,whatsapp,split'],
@@ -156,7 +157,16 @@ class AdminPosController extends Controller
                     $pointsDiscountAmount = $pointsRedeemed * 100;
                 }
 
-                $total = max(0.0, $totalAfterCoupon - $pointsDiscountAmount);
+                $totalAfterPoints = max(0.0, $totalAfterCoupon - $pointsDiscountAmount);
+
+                // Calculate Store Credit Wallet Deduction
+                $storeCreditUsed = 0.0;
+                if ($customer && ! empty($data['use_store_credit']) && (float) $customer->store_credit > 0) {
+                    $storeCreditUsed = min((float) $customer->store_credit, $totalAfterPoints);
+                    $customer->deductStoreCredit($storeCreditUsed);
+                }
+
+                $total = max(0.0, $totalAfterPoints - $storeCreditUsed);
 
                 $isSplit = ($paymentMethod === 'split') || (! empty($data['is_split_payment']));
                 $primaryMethod = $isSplit ? ($data['primary_payment_method'] ?? 'cash') : $paymentMethod;
@@ -198,6 +208,7 @@ class AdminPosController extends Controller
                     'points_earned' => $pointsEarned,
                     'points_redeemed' => $pointsRedeemed,
                     'points_discount_amount' => $pointsDiscountAmount,
+                    'store_credit_used' => $storeCreditUsed,
                     'total' => $total,
                     'payment_method' => $primaryMethod,
                     'is_split_payment' => $isSplit,

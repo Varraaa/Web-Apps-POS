@@ -63,6 +63,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/customers', [AdminCustomerController::class, 'index'])->name('customers.index');
     Route::get('/customers/search', [AdminCustomerController::class, 'search'])->name('customers.search');
     Route::post('/customers/quick-create', [AdminCustomerController::class, 'quickCreate'])->name('customers.quick-create');
+    Route::post('/customers/{customer}/adjust-credit', [AdminCustomerController::class, 'adjustCredit'])->name('customers.adjust-credit');
     Route::delete('/customers/{customer}', [AdminCustomerController::class, 'destroy'])->name('customers.destroy');
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');

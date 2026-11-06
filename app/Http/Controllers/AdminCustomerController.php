@@ -52,7 +52,7 @@ class AdminCustomerController extends Controller
             $query->where('name', 'like', "%{$q}%")
                 ->orWhere('phone', 'like', "%{$q}%")
                 ->orWhere('member_code', 'like', "%{$q}%");
-        })->take(8)->get(['id', 'member_code', 'name', 'phone', 'tier', 'points', 'total_spent']);
+        })->take(8)->get(['id', 'member_code', 'name', 'phone', 'tier', 'points', 'store_credit', 'total_spent']);
 
         return response()->json([
             'customers' => $customers->map(fn ($c) => [
@@ -63,6 +63,8 @@ class AdminCustomerController extends Controller
                 'tier' => $c->tier,
                 'tier_label' => $c->tier_label,
                 'points' => $c->points,
+                'store_credit' => (float) $c->store_credit,
+                'formatted_store_credit' => $c->formatted_store_credit,
                 'total_spent' => $c->total_spent,
             ]),
         ]);
@@ -99,6 +101,25 @@ class AdminCustomerController extends Controller
                 'points' => $customer->points,
             ],
         ]);
+    }
+
+    /**
+     * Adjust customer store credit.
+     */
+    public function adjustCredit(Request $request, Customer $customer): RedirectResponse
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validated['amount'] >= 0) {
+            $customer->addStoreCredit((float) $validated['amount'], $validated['notes'] ?? 'Penyesuaian kasir');
+        } else {
+            $customer->deductStoreCredit(abs((float) $validated['amount']));
+        }
+
+        return back()->with('success', "Saldo dompet toko {$customer->name} berhasil diperbarui.");
     }
 
     /**

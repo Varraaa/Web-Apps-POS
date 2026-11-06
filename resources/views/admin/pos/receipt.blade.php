@@ -216,6 +216,13 @@
             </div>
         @endif
 
+        @if(($order->store_credit_used ?? 0) > 0)
+            <div class="total-row">
+                <span>Saldo Dompet Toko:</span>
+                <span>- Rp {{ number_format($order->store_credit_used, 0, ',', '.') }}</span>
+            </div>
+        @endif
+
         <div class="receipt-double-divider"></div>
 
         <div class="total-row grand-total">

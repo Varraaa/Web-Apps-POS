@@ -474,4 +474,98 @@ class PosSystemTest extends TestCase
         $slipResponse->assertOk();
         $slipResponse->assertSee('BUKTI RETUR');
     }
+
+    public function test_pos_checkout_can_use_customer_store_credit(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = Customer::create([
+            'name' => 'Rina Dompet',
+            'phone' => '081299990000',
+            'tier' => 'bronze',
+            'points' => 0,
+            'store_credit' => 25000,
+            'total_spent' => 0,
+        ]);
+
+        $product = Product::factory()->create([
+            'price' => 60000,
+            'stock' => 5,
+            'discount_percent' => 0,
+        ]);
+
+        $payload = [
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'customer_phone' => $customer->phone,
+            'use_store_credit' => true,
+            'payment_method' => 'cash',
+            'amount_paid' => 35000,
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)
+            ->postJson(route('admin.pos.checkout'), $payload);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('orders', [
+            'customer_id' => $customer->id,
+            'total' => 35000,
+            'store_credit_used' => 25000,
+        ]);
+
+        $this->assertEquals(0, (float) $customer->fresh()->store_credit);
+    }
+
+    public function test_order_return_with_store_credit_refund_credits_customer_wallet(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = Customer::create([
+            'name' => 'Sinta Credit',
+            'phone' => '081277778888',
+            'tier' => 'bronze',
+            'points' => 0,
+            'store_credit' => 10000,
+            'total_spent' => 0,
+        ]);
+
+        $order = Order::create([
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'customer_phone' => $customer->phone,
+            'shipping_address' => 'Di Tempat',
+            'total' => 80000,
+            'subtotal' => 80000,
+            'payment_method' => 'cash',
+            'status' => 'completed',
+            'source' => 'pos',
+        ]);
+
+        $product = Product::factory()->create(['price' => 80000, 'stock' => 3]);
+        $item = $order->items()->create([
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'price' => 80000,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->post(route('admin.orders.returns.store', $order), [
+                'order_item_id' => $item->id,
+                'quantity' => 1,
+                'refund_amount' => 80000,
+                'reason' => 'customer_change_mind',
+                'condition' => 'intact_with_tags',
+                'refund_type' => 'store_credit',
+                'restock_item' => 1,
+            ]);
+
+        $response->assertRedirect();
+
+        // Customer wallet balance increased from 10.000 to 90.000
+        $this->assertEquals(90000, (float) $customer->fresh()->store_credit);
+    }
 }

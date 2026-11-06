@@ -98,6 +98,11 @@ class AdminOrderReturnController extends Controller
                 Product::where('id', $orderItem->product_id)->increment('stock', $validated['quantity']);
             }
 
+            // If store credit refund, add to customer balance
+            if ($validated['refund_type'] === 'store_credit' && $order->customer) {
+                $order->customer->addStoreCredit((float) $validated['refund_amount'], "Refund retur #{$orderReturn->return_number}");
+            }
+
             return redirect()->route('admin.returns.show', $orderReturn)
                 ->with('success', "Retur barang #{$orderReturn->return_number} berhasil diproses!");
         });

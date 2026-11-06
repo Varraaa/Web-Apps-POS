@@ -18,6 +18,7 @@ class Customer extends Model
         'email',
         'tier',
         'points',
+        'store_credit',
         'total_spent',
         'address',
         'notes',
@@ -27,6 +28,7 @@ class Customer extends Model
     {
         return [
             'points' => 'integer',
+            'store_credit' => 'decimal:2',
             'total_spent' => 'decimal:2',
         ];
     }
@@ -39,6 +41,23 @@ class Customer extends Model
     public function getFormattedTotalSpentAttribute(): string
     {
         return 'Rp '.number_format((float) $this->total_spent, 0, ',', '.');
+    }
+
+    public function getFormattedStoreCreditAttribute(): string
+    {
+        return 'Rp '.number_format((float) $this->store_credit, 0, ',', '.');
+    }
+
+    public function addStoreCredit(float $amount, string $reason = ''): void
+    {
+        $this->store_credit = (float) $this->store_credit + $amount;
+        $this->save();
+    }
+
+    public function deductStoreCredit(float $amount): void
+    {
+        $this->store_credit = max(0.0, (float) $this->store_credit - $amount);
+        $this->save();
     }
 
     public function getTierLabelAttribute(): string
