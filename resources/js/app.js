@@ -359,6 +359,19 @@ function initPosRegister() {
     const grandtotalDisplay = document.getElementById('pos-val-grandtotal');
     const payBtn = document.getElementById('pos-btn-open-payment');
 
+    // Custom Manager Discount Elements
+    let appliedCustomDiscount = null;
+    const btnToggleCustomDisc = document.getElementById('pos-btn-toggle-custom-discount');
+    const customDiscPane = document.getElementById('pos-custom-discount-pane');
+    const customDiscType = document.getElementById('pos-custom-disc-type');
+    const customDiscValue = document.getElementById('pos-custom-disc-value');
+    const customDiscReason = document.getElementById('pos-custom-disc-reason');
+    const btnApplyCustomDisc = document.getElementById('pos-btn-apply-custom-disc');
+    const btnClearCustomDisc = document.getElementById('pos-btn-clear-custom-disc');
+    const customDiscRow = document.getElementById('pos-row-custom-discount');
+    const customDiscSummaryLabel = document.getElementById('pos-custom-disc-summary-label');
+    const customDiscValDisplay = document.getElementById('pos-val-custom-discount');
+
     // Modals
     const paymentModal = document.getElementById('pos-payment-modal');
     const modalCloseBtn = document.getElementById('pos-modal-close');
@@ -438,11 +451,20 @@ function initPosRegister() {
             }
         }
 
+        let customDiscountAmount = 0;
+        if (appliedCustomDiscount && appliedCustomDiscount.value > 0) {
+            if (appliedCustomDiscount.type === 'percent') {
+                customDiscountAmount = Math.round((appliedCustomDiscount.value / 100) * subtotal);
+            } else {
+                customDiscountAmount = Math.min(appliedCustomDiscount.value, subtotal);
+            }
+        }
+
         let pointsDiscount = 0;
-        const totalAfterCoupon = Math.max(0, subtotal - discount);
+        const totalAfterDiscounts = Math.max(0, subtotal - discount - customDiscountAmount);
 
         if (activeCustomer && activeCustomer.points > 0) {
-            const maxPoints = Math.min(activeCustomer.points, Math.floor(totalAfterCoupon / 100));
+            const maxPoints = Math.min(activeCustomer.points, Math.floor(totalAfterDiscounts / 100));
             if (redeemPointsCheck && redeemPointsCheck.checked) {
                 pointsDiscount = maxPoints * 100;
                 labelRedeemPoints.textContent = `Tukar ${maxPoints} Poin (Hemat ${formatRp(pointsDiscount)})`;
@@ -451,7 +473,7 @@ function initPosRegister() {
             }
         }
 
-        const totalAfterPoints = Math.max(0, totalAfterCoupon - pointsDiscount);
+        const totalAfterPoints = Math.max(0, totalAfterDiscounts - pointsDiscount);
 
         let creditDeduction = 0;
         if (activeCustomer && parseFloat(activeCustomer.store_credit || 0) > 0) {
@@ -478,6 +500,16 @@ function initPosRegister() {
             discountDisplay.textContent = '- ' + formatRp(discount + pointsDiscount);
         } else {
             discountRow.style.display = 'none';
+        }
+
+        if (customDiscountAmount > 0) {
+            if (customDiscRow) customDiscRow.style.display = 'flex';
+            if (customDiscSummaryLabel) {
+                customDiscSummaryLabel.textContent = appliedCustomDiscount.reason || (appliedCustomDiscount.type === 'percent' ? `${appliedCustomDiscount.value}%` : 'Diskon Khusus');
+            }
+            if (customDiscValDisplay) customDiscValDisplay.textContent = '- ' + formatRp(customDiscountAmount);
+        } else {
+            if (customDiscRow) customDiscRow.style.display = 'none';
         }
 
         if (creditDeduction > 0) {
@@ -656,6 +688,37 @@ function initPosRegister() {
         if (window.showToast) {
             window.showToast(`Voucher ${selectedCode} berhasil dipasang!`, 'success');
         }
+    });
+
+    // Custom Manager Discount Triggers
+    btnToggleCustomDisc?.addEventListener('click', () => {
+        customDiscPane?.classList.toggle('hidden');
+    });
+
+    btnApplyCustomDisc?.addEventListener('click', () => {
+        const val = parseFloat(customDiscValue?.value) || 0;
+        if (val <= 0) {
+            appliedCustomDiscount = null;
+            calculateTotals();
+            return;
+        }
+        appliedCustomDiscount = {
+            type: customDiscType?.value || 'fixed',
+            value: val,
+            reason: customDiscReason?.value.trim() || 'Diskon Khusus Kasir'
+        };
+        calculateTotals();
+        posAudio.beep();
+        if (window.showToast) window.showToast('Diskon khusus berhasil diterapkan!', 'success');
+    });
+
+    btnClearCustomDisc?.addEventListener('click', () => {
+        appliedCustomDiscount = null;
+        if (customDiscValue) customDiscValue.value = '';
+        if (customDiscReason) customDiscReason.value = '';
+        calculateTotals();
+        posAudio.pop();
+        if (window.showToast) window.showToast('Diskon khusus dihapus.', 'info');
     });
 
     // Customer & Loyalty Member Functions
@@ -1298,6 +1361,9 @@ function initPosRegister() {
                     secondary_payment_method: secondaryMethod,
                     secondary_amount_paid: secondaryAmount,
                     coupon_code: appliedCoupon?.code || null,
+                    custom_discount_type: appliedCustomDiscount?.type || null,
+                    custom_discount_value: appliedCustomDiscount?.value || null,
+                    custom_discount_reason: appliedCustomDiscount?.reason || null,
                     notes: notes,
                     items: ticket.map(t => ({
                         product_id: t.id,
@@ -1328,6 +1394,7 @@ function initPosRegister() {
             // Reset Ticket
             ticket = [];
             appliedCoupon = null;
+            appliedCustomDiscount = null;
             activeCustomer = null;
             selectedMemberCard?.classList.add('hidden');
             walkinInputs?.classList.remove('hidden');

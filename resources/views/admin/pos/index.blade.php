@@ -240,6 +240,28 @@
                     </div>
                 </div>
 
+                <!-- Custom Manager / Spontaneous Discount Trigger & Box -->
+                <div class="mt-2 pt-2 border-t border-slate-100">
+                    <button type="button" id="pos-btn-toggle-custom-discount" class="text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center justify-between w-full">
+                        <span>🏷 Diskon Khusus Kasir / Manajer</span>
+                        <span id="pos-custom-disc-icon">▼</span>
+                    </button>
+                    <div id="pos-custom-discount-pane" class="hidden mt-2 p-2.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-xs">
+                        <div class="flex gap-2">
+                            <select id="pos-custom-disc-type" class="text-xs font-semibold p-1.5 rounded border border-slate-300 bg-white">
+                                <option value="fixed">Nominal (Rp)</option>
+                                <option value="percent">Persen (%)</option>
+                            </select>
+                            <input type="number" id="pos-custom-disc-value" placeholder="Nilai diskon..." min="0" class="w-full text-xs p-1.5 rounded border border-slate-300 bg-white">
+                        </div>
+                        <input type="text" id="pos-custom-disc-reason" placeholder="Alasan diskon (e.g. Diskon Khusus Manajer / Defect Minor)..." class="w-full text-xs p-1.5 rounded border border-slate-300 bg-white">
+                        <div class="flex justify-end gap-1.5 pt-1">
+                            <button type="button" id="pos-btn-clear-custom-disc" class="pos-btn-ghost text-[10px] py-1 px-2 text-rose-600">Hapus</button>
+                            <button type="button" id="pos-btn-apply-custom-disc" class="pos-btn-pay text-[10px] py-1 px-3">Terapkan Diskon</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="pos-summary-table">
                     <div class="pos-summary-row">
                         <span>Subtotal</span>
@@ -248,6 +270,10 @@
                     <div class="pos-summary-row text-emerald-600" id="pos-row-discount" style="display: none;">
                         <span>Diskon (<span id="pos-discount-label">-</span>)</span>
                         <strong id="pos-val-discount">- Rp 0</strong>
+                    </div>
+                    <div class="pos-summary-row text-purple-600" id="pos-row-custom-discount" style="display: none;">
+                        <span>Diskon Khusus (<span id="pos-custom-disc-summary-label">-</span>)</span>
+                        <strong id="pos-val-custom-discount">- Rp 0</strong>
                     </div>
                     <div class="pos-summary-row text-blue-600" id="pos-row-credit" style="display: none;">
                         <span>Saldo Dompet Toko</span>

@@ -568,4 +568,46 @@ class PosSystemTest extends TestCase
         // Customer wallet balance increased from 10.000 to 90.000
         $this->assertEquals(90000, (float) $customer->fresh()->store_credit);
     }
+
+    public function test_pos_checkout_can_apply_spontaneous_custom_manager_discount(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'price' => 100000,
+            'stock' => 5,
+            'discount_percent' => 0,
+        ]);
+
+        $payload = [
+            'customer_name' => 'Pak Rudi',
+            'customer_phone' => '081234567890',
+            'custom_discount_type' => 'fixed',
+            'custom_discount_value' => 15000,
+            'custom_discount_reason' => 'Diskon Manajer - Defect Minor',
+            'payment_method' => 'cash',
+            'amount_paid' => 85000,
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)
+            ->postJson(route('admin.pos.checkout'), $payload);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('orders', [
+            'customer_name' => 'Pak Rudi',
+            'total' => 85000,
+            'discount_amount' => 15000,
+            'custom_discount_amount' => 15000,
+            'custom_discount_reason' => 'Diskon Manajer - Defect Minor',
+        ]);
+
+        $order = Order::where('customer_name', 'Pak Rudi')->first();
+        $receiptResponse = $this->actingAs($admin)->get(route('admin.pos.receipt', $order));
+        $receiptResponse->assertOk();
+        $receiptResponse->assertSee('Diskon Khusus (Diskon Manajer - Defect Minor)');
+    }
 }

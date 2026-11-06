@@ -84,6 +84,9 @@ class AdminPosController extends Controller
             'secondary_amount_paid' => ['nullable', 'numeric', 'min:0'],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
             'coupon_code' => ['nullable', 'string', 'max:30'],
+            'custom_discount_type' => ['nullable', 'string', 'in:fixed,percent'],
+            'custom_discount_value' => ['nullable', 'numeric', 'min:0'],
+            'custom_discount_reason' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
@@ -134,17 +137,33 @@ class AdminPosController extends Controller
                 }
 
                 // Calculate coupon discount
-                $discountAmount = 0.0;
+                $couponDiscountAmount = 0.0;
                 $couponCode = null;
 
                 if (! empty($data['coupon_code'])) {
                     $coupon = Discount::where('code', strtoupper(trim($data['coupon_code'])))->first();
                     if ($coupon && $coupon->isValid($subtotal)) {
-                        $discountAmount = $coupon->calculateDiscount($subtotal);
+                        $couponDiscountAmount = $coupon->calculateDiscount($subtotal);
                         $couponCode = $coupon->code;
                     }
                 }
 
+                // Calculate spontaneous / custom manager discount
+                $customDiscountAmount = 0.0;
+                $customDiscountType = $data['custom_discount_type'] ?? null;
+                $customDiscountValue = isset($data['custom_discount_value']) ? (float) $data['custom_discount_value'] : null;
+                $customDiscountReason = $data['custom_discount_reason'] ?? null;
+
+                if ($customDiscountValue > 0) {
+                    if ($customDiscountType === 'percent') {
+                        $customDiscountAmount = round(($customDiscountValue / 100) * $subtotal);
+                    } else {
+                        $customDiscountAmount = min($customDiscountValue, $subtotal);
+                        $customDiscountType = 'fixed';
+                    }
+                }
+
+                $discountAmount = $couponDiscountAmount + $customDiscountAmount;
                 $totalAfterCoupon = max(0.0, $subtotal - $discountAmount);
 
                 // Calculate Loyalty Points Redemption
@@ -205,6 +224,10 @@ class AdminPosController extends Controller
                     'subtotal' => $subtotal,
                     'discount_amount' => $discountAmount,
                     'coupon_code' => $couponCode,
+                    'custom_discount_type' => $customDiscountType,
+                    'custom_discount_value' => $customDiscountValue,
+                    'custom_discount_amount' => $customDiscountAmount,
+                    'custom_discount_reason' => $customDiscountReason,
                     'points_earned' => $pointsEarned,
                     'points_redeemed' => $pointsRedeemed,
                     'points_discount_amount' => $pointsDiscountAmount,

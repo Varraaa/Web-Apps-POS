@@ -216,6 +216,13 @@
             </div>
         @endif
 
+        @if(($order->custom_discount_amount ?? 0) > 0)
+            <div class="total-row" style="color: #6b21a8;">
+                <span>Diskon Khusus ({{ $order->custom_discount_reason ?? 'Manajer' }}):</span>
+                <span>- Rp {{ number_format($order->custom_discount_amount, 0, ',', '.') }}</span>
+            </div>
+        @endif
+
         @if(($order->store_credit_used ?? 0) > 0)
             <div class="total-row">
                 <span>Saldo Dompet Toko:</span>

@@ -22,6 +22,10 @@ class Order extends Model
         'subtotal',
         'discount_amount',
         'coupon_code',
+        'custom_discount_type',
+        'custom_discount_value',
+        'custom_discount_amount',
+        'custom_discount_reason',
         'total',
         'status',
         'payment_method',
@@ -56,6 +60,8 @@ class Order extends Model
             'points_redeemed' => 'integer',
             'points_discount_amount' => 'decimal:2',
             'store_credit_used' => 'decimal:2',
+            'custom_discount_value' => 'decimal:2',
+            'custom_discount_amount' => 'decimal:2',
         ];
     }
 
@@ -97,6 +103,11 @@ class Order extends Model
     public function getFormattedDiscountAttribute(): string
     {
         return 'Rp '.number_format((float) $this->discount_amount, 0, ',', '.');
+    }
+
+    public function getFormattedCustomDiscountAmountAttribute(): string
+    {
+        return 'Rp '.number_format((float) ($this->custom_discount_amount ?? 0), 0, ',', '.');
     }
 
     public function getFormattedStoreCreditUsedAttribute(): string
