@@ -1080,6 +1080,10 @@ function initPosRegister() {
             document.getElementById('close-shift-opened-at').textContent = `${s.opened_at} (${s.opened_time})`;
             document.getElementById('close-shift-starting-cash').textContent = formatRp(s.starting_cash);
             document.getElementById('close-shift-cash-sales').textContent = `+${formatRp(s.total_cash_sales)} (${s.total_transactions} tx)`;
+            const elCashIn = document.getElementById('close-shift-cash-in');
+            if (elCashIn) elCashIn.textContent = `+${formatRp(s.total_cash_in || 0)}`;
+            const elCashOut = document.getElementById('close-shift-cash-out');
+            if (elCashOut) elCashOut.textContent = `-${formatRp(s.total_cash_out || 0)}`;
             document.getElementById('close-shift-expected-cash').textContent = formatRp(s.expected_cash);
             currentExpectedCash = s.expected_cash;
 
@@ -1142,6 +1146,53 @@ function initPosRegister() {
             window.open(data.z_report_url, '_blank', 'width=420,height=650');
             if (window.showToast) window.showToast(data.message, 'success');
             setTimeout(() => window.location.reload(), 1000);
+        } catch (err) {
+            alert(err.message);
+        }
+    });
+
+    // Petty Cash Modal Elements
+    const pettyCashModal = document.getElementById('pos-petty-cash-modal');
+    const btnTriggerPettyCash = document.getElementById('pos-btn-trigger-petty-cash');
+    const closePettyCashModal = document.getElementById('pos-close-petty-cash-modal');
+    const dismissPettyCashModal = document.getElementById('pos-dismiss-petty-cash-modal');
+    const pettyCashForm = document.getElementById('pos-petty-cash-form');
+
+    btnTriggerPettyCash?.addEventListener('click', () => {
+        pettyCashModal?.classList.remove('hidden');
+        document.getElementById('petty-cash-amount')?.focus();
+    });
+
+    const hidePettyCashModal = () => pettyCashModal?.classList.add('hidden');
+    closePettyCashModal?.addEventListener('click', hidePettyCashModal);
+    dismissPettyCashModal?.addEventListener('click', hidePettyCashModal);
+
+    pettyCashForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const type = document.querySelector('input[name="petty_type"]:checked')?.value || 'cash_out';
+        const amount = parseFloat(document.getElementById('petty-cash-amount').value) || 0;
+        const category = document.getElementById('petty-cash-category').value;
+        const notes = document.getElementById('petty-cash-notes').value.trim();
+
+        try {
+            const res = await fetch('/admin/pos/shift/drawer-movement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify({ type, amount, category, notes })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Gagal mencatat mutasi kas.');
+
+            hidePettyCashModal();
+            pettyCashForm.reset();
+            posAudio.chime();
+            if (window.showToast) window.showToast(data.message, 'success');
         } catch (err) {
             alert(err.message);
         }

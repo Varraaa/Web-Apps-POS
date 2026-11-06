@@ -610,4 +610,62 @@ class PosSystemTest extends TestCase
         $receiptResponse->assertOk();
         $receiptResponse->assertSee('Diskon Khusus (Diskon Manajer - Defect Minor)');
     }
+
+    public function test_pos_cash_drawer_petty_cash_movement_reconciles_in_shift_and_z_report(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Open shift
+        $openResponse = $this->actingAs($admin)->postJson(route('admin.pos.shift.open'), [
+            'cashier_name' => 'Sari Kasir',
+            'starting_cash' => 100000,
+            'notes' => 'Shift Pagi',
+        ]);
+        $openResponse->assertOk();
+
+        // Record Cash In
+        $inResponse = $this->actingAs($admin)->postJson(route('admin.pos.shift.drawer-movement'), [
+            'type' => 'cash_in',
+            'amount' => 50000,
+            'category' => 'change_replenishment',
+            'notes' => 'Tambah modal uang kembalian 2rb',
+        ]);
+        $inResponse->assertOk();
+
+        // Record Cash Out (Petty Cash)
+        $outResponse = $this->actingAs($admin)->postJson(route('admin.pos.shift.drawer-movement'), [
+            'type' => 'cash_out',
+            'amount' => 15000,
+            'category' => 'supplies',
+            'notes' => 'Beli lakban packing',
+        ]);
+        $outResponse->assertOk();
+
+        // Check current shift calculations: Expected = 100.000 + 50.000 - 15.000 = 135.000
+        $currentResponse = $this->actingAs($admin)->getJson(route('admin.pos.shift.current'));
+        $currentResponse->assertOk();
+        $currentData = $currentResponse->json('shift');
+        $this->assertEquals(50000, $currentData['total_cash_in']);
+        $this->assertEquals(15000, $currentData['total_cash_out']);
+        $this->assertEquals(135000, $currentData['expected_cash']);
+
+        // Close Shift with exact 135.000
+        $closeResponse = $this->actingAs($admin)->postJson(route('admin.pos.shift.close'), [
+            'actual_cash' => 135000,
+            'notes' => 'Tutup shift pas',
+        ]);
+        $closeResponse->assertOk();
+
+        $shift = CashierShift::first();
+        $this->assertEquals(135000, (float) $shift->expected_cash);
+        $this->assertEquals(135000, (float) $shift->actual_cash);
+        $this->assertEquals(0, (float) $shift->difference);
+
+        // Z-Report view assertions
+        $zResponse = $this->actingAs($admin)->get(route('admin.pos.shift.z-report', $shift));
+        $zResponse->assertOk();
+        $zResponse->assertSee('Kas Masuk Operasional (+):');
+        $zResponse->assertSee('Kas Keluar Petty Cash (-):');
+        $zResponse->assertSee('Beli lakban packing');
+    }
 }

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CashierShift extends Model
 {
@@ -37,9 +39,24 @@ class CashierShift extends Model
         'total_transactions' => 'integer',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function drawerTransactions(): HasMany
+    {
+        return $this->hasMany(CashierDrawerTransaction::class);
+    }
+
+    public function totalCashIn(): float
+    {
+        return (float) $this->drawerTransactions()->where('type', 'cash_in')->sum('amount');
+    }
+
+    public function totalCashOut(): float
+    {
+        return (float) $this->drawerTransactions()->where('type', 'cash_out')->sum('amount');
     }
 
     public function scopeActive($query)

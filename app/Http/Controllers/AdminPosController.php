@@ -400,7 +400,9 @@ class AdminPosController extends Controller
 
         $cashSales = (float) $orders->where('payment_method', 'cash')->sum('total');
         $nonCashSales = (float) $orders->where('payment_method', '!=', 'cash')->sum('total');
-        $expectedCash = (float) ($shift->starting_cash + $cashSales);
+        $cashIn = $shift->totalCashIn();
+        $cashOut = $shift->totalCashOut();
+        $expectedCash = (float) ($shift->starting_cash + $cashSales + $cashIn - $cashOut);
 
         return response()->json([
             'active' => true,
@@ -412,6 +414,8 @@ class AdminPosController extends Controller
                 'starting_cash' => (float) $shift->starting_cash,
                 'total_cash_sales' => $cashSales,
                 'total_non_cash_sales' => $nonCashSales,
+                'total_cash_in' => $cashIn,
+                'total_cash_out' => $cashOut,
                 'total_transactions' => $orders->count(),
                 'expected_cash' => $expectedCash,
             ],
@@ -479,7 +483,9 @@ class AdminPosController extends Controller
 
         $cashSales = (float) $orders->where('payment_method', 'cash')->sum('total');
         $nonCashSales = (float) $orders->where('payment_method', '!=', 'cash')->sum('total');
-        $expectedCash = (float) ($shift->starting_cash + $cashSales);
+        $cashIn = $shift->totalCashIn();
+        $cashOut = $shift->totalCashOut();
+        $expectedCash = (float) ($shift->starting_cash + $cashSales + $cashIn - $cashOut);
         $actualCash = (float) $validated['actual_cash'];
         $difference = $actualCash - $expectedCash;
 
@@ -500,6 +506,73 @@ class AdminPosController extends Controller
             'message' => "Shift kasir {$shift->cashier_name} berhasil ditutup. Laporan Z-Report siap dicetak.",
             'z_report_url' => route('admin.pos.shift.z-report', $shift),
             'shift' => $shift,
+        ]);
+    }
+
+    /**
+     * Record cash in or cash out (petty cash) movement for the active shift.
+     */
+    public function recordDrawerMovement(Request $request): JsonResponse
+    {
+        $shift = CashierShift::active()->first();
+        if (! $shift) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada shift kasir yang sedang aktif.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'type' => ['required', 'in:cash_in,cash_out'],
+            'amount' => ['required', 'numeric', 'min:1000'],
+            'category' => ['required', 'string', 'max:50'],
+            'notes' => ['required', 'string', 'max:255'],
+        ]);
+
+        $movement = $shift->drawerTransactions()->create([
+            'user_id' => $request->user()?->id,
+            'type' => $validated['type'],
+            'amount' => $validated['amount'],
+            'category' => $validated['category'],
+            'notes' => $validated['notes'],
+            'performed_by' => $request->user()?->name ?? $shift->cashier_name,
+        ]);
+
+        $actionLabel = $movement->type === 'cash_in' ? 'Kas Masuk (+)' : 'Kas Keluar (-)';
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$actionLabel} sebesar {$movement->formatted_amount} berhasil dicatat di laci kasir!",
+            'movement' => $movement,
+        ]);
+    }
+
+    /**
+     * List drawer transactions for the active shift.
+     */
+    public function listDrawerMovements(): JsonResponse
+    {
+        $shift = CashierShift::active()->first();
+        if (! $shift) {
+            return response()->json(['movements' => []]);
+        }
+
+        $movements = $shift->drawerTransactions()->latest()->get();
+
+        return response()->json([
+            'movements' => $movements->map(fn ($m) => [
+                'id' => $m->id,
+                'type' => $m->type,
+                'type_label' => $m->type_label,
+                'amount' => (float) $m->amount,
+                'formatted_amount' => $m->formatted_amount,
+                'category_label' => $m->category_label,
+                'notes' => $m->notes,
+                'performed_by' => $m->performed_by,
+                'time' => $m->created_at->format('H:i'),
+            ]),
+            'total_cash_in' => $shift->totalCashIn(),
+            'total_cash_out' => $shift->totalCashOut(),
         ]);
     }
 

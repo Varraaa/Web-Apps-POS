@@ -23,7 +23,10 @@
                             <span class="font-bold text-emerald-900 block leading-tight">{{ $currentShift->cashier_name }}</span>
                             <span class="text-emerald-700 block text-[10px]">Modal: Rp {{ number_format($currentShift->starting_cash, 0, ',', '.') }}</span>
                         </div>
-                        <button type="button" id="pos-btn-trigger-close-shift" class="ml-2 px-2.5 py-1 bg-emerald-700 text-white font-semibold rounded text-[11px] hover:bg-emerald-800 transition">
+                        <button type="button" id="pos-btn-trigger-petty-cash" class="px-2 py-1 bg-white border border-emerald-300 text-emerald-800 font-semibold rounded text-[11px] hover:bg-emerald-100 transition" title="Catat Kas Masuk / Kas Keluar Operasional">
+                            💸 Petty Cash
+                        </button>
+                        <button type="button" id="pos-btn-trigger-close-shift" class="ml-1 px-2.5 py-1 bg-emerald-700 text-white font-semibold rounded text-[11px] hover:bg-emerald-800 transition">
                             Tutup Shift / Z-Report
                         </button>
                     </div>
@@ -595,6 +598,14 @@
                     <span class="text-slate-500">Penjualan Tunai:</span>
                     <span id="close-shift-cash-sales" class="font-mono text-emerald-600 font-semibold">+Rp 0</span>
                 </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Kas Masuk Operasional (+):</span>
+                    <span id="close-shift-cash-in" class="font-mono text-emerald-600 font-semibold">+Rp 0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Kas Keluar Petty Cash (-):</span>
+                    <span id="close-shift-cash-out" class="font-mono text-rose-600 font-semibold">-Rp 0</span>
+                </div>
                 <div class="flex justify-between border-t border-slate-200 pt-1.5 font-bold">
                     <span class="text-slate-800">Uang Seharusnya di Laci:</span>
                     <span id="close-shift-expected-cash" class="font-mono text-slate-900">Rp 0</span>
@@ -622,6 +633,61 @@
                 <button type="submit" id="btn-submit-close-shift" class="pos-btn-pay w-full justify-center text-xs">
                     Tutup Shift & Cetak Z-Report ✓
                 </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Petty Cash In / Out Modal -->
+<div id="pos-petty-cash-modal" class="pos-modal-backdrop hidden">
+    <div class="pos-modal-card max-w-sm">
+        <div class="pos-modal-header">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900">Mutasi Kas Laci (Petty Cash)</h3>
+                <p class="text-xs text-slate-500">Catat kas masuk atau kas keluar operasional toko.</p>
+            </div>
+            <button type="button" id="pos-close-petty-cash-modal" class="pos-modal-close-btn">&times;</button>
+        </div>
+        <form id="pos-petty-cash-form" class="pos-modal-body space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Tipe Mutasi</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer bg-slate-50 text-xs font-bold">
+                        <input type="radio" name="petty_type" value="cash_in" class="text-emerald-600 focus:ring-0">
+                        <span class="text-emerald-700">➕ Kas Masuk</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 cursor-pointer bg-slate-50 text-xs font-bold">
+                        <input type="radio" name="petty_type" value="cash_out" checked class="text-rose-600 focus:ring-0">
+                        <span class="text-rose-700">➖ Kas Keluar</span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nominal (Rp)</label>
+                <input type="number" id="petty-cash-amount" required min="1000" step="1000" placeholder="10.000" class="pos-input-field text-xs font-mono font-bold">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Kategori Keperluan</label>
+                <select id="petty-cash-category" required class="pos-input-field text-xs bg-white">
+                    <option value="supplies">Beli Perlengkapan / Kantong / ATK</option>
+                    <option value="courier_delivery">Ongkir Kurir Pickup / Logistik</option>
+                    <option value="change_replenishment">Tambah Uang Kembalian (Kas Masuk)</option>
+                    <option value="cleaning_security">Kebersihan & Keamanan Toko</option>
+                    <option value="snack_refreshment">Konsumsi / Air Galon Toko</option>
+                    <option value="other">Operasional Lain-lain</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan / Catatan</label>
+                <input type="text" id="petty-cash-notes" required placeholder="e.g. Beli lakban & kantong kresek" class="pos-input-field text-xs">
+            </div>
+
+            <div class="pos-modal-footer pt-2">
+                <button type="button" id="pos-dismiss-petty-cash-modal" class="pos-btn-ghost text-xs">Batal</button>
+                <button type="submit" class="pos-btn-pay text-xs">Simpan Mutasi Kas ✓</button>
             </div>
         </form>
     </div>

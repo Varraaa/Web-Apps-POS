@@ -53,6 +53,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/pos/shift/current', [AdminPosController::class, 'getCurrentShift'])->name('pos.shift.current');
     Route::post('/pos/shift/open', [AdminPosController::class, 'openShift'])->name('pos.shift.open');
     Route::post('/pos/shift/close', [AdminPosController::class, 'closeShift'])->name('pos.shift.close');
+    Route::post('/pos/shift/drawer-movement', [AdminPosController::class, 'recordDrawerMovement'])->name('pos.shift.drawer-movement');
+    Route::get('/pos/shift/drawer-movements', [AdminPosController::class, 'listDrawerMovements'])->name('pos.shift.drawer-movements');
     Route::get('/pos/shift/{shift}/z-report', [AdminPosController::class, 'zReport'])->name('pos.shift.z-report');
     Route::get('/products/{product}/barcode-label', [AdminProductController::class, 'barcodeLabel'])->name('products.barcode-label');
     Route::post('/products/{product}/adjust-stock', [AdminProductController::class, 'adjustStock'])->name('products.adjust-stock');

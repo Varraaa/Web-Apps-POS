@@ -159,8 +159,20 @@
         </div>
         <div class="meta-row">
             <span>Penjualan Tunai (Cash):</span>
-            <span>Rp {{ number_format($shift->total_cash_sales, 0, ',', '.') }}</span>
+            <span>+ Rp {{ number_format($shift->total_cash_sales, 0, ',', '.') }}</span>
         </div>
+        @if($shift->totalCashIn() > 0)
+            <div class="meta-row">
+                <span>Kas Masuk Operasional (+):</span>
+                <span>+ Rp {{ number_format($shift->totalCashIn(), 0, ',', '.') }}</span>
+            </div>
+        @endif
+        @if($shift->totalCashOut() > 0)
+            <div class="meta-row">
+                <span>Kas Keluar Petty Cash (-):</span>
+                <span>- Rp {{ number_format($shift->totalCashOut(), 0, ',', '.') }}</span>
+            </div>
+        @endif
         <div class="divider"></div>
         <div class="meta-row bold">
             <span>Total Uang Kas Seharusnya:</span>
@@ -203,6 +215,21 @@
                 <span>Tidak ada transaksi non-tunai</span>
             </div>
         @endforelse
+
+        @if($shift->drawerTransactions && $shift->drawerTransactions->count() > 0)
+            <div class="divider"></div>
+            <div style="font-size: 10px; font-weight: bold; margin-bottom: 6px; text-transform: uppercase;">
+                Mutasi Kas Laci (Petty Cash):
+            </div>
+            @foreach($shift->drawerTransactions as $dt)
+                <div class="meta-row" style="font-size: 10px;">
+                    <span>{{ $dt->created_at->format('H:i') }} - {{ $dt->notes }}:</span>
+                    <span class="bold">
+                        {{ $dt->type === 'cash_in' ? '+' : '-' }} {{ $dt->formatted_amount }}
+                    </span>
+                </div>
+            @endforeach
+        @endif
 
         <div class="double-divider"></div>
 
