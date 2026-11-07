@@ -550,6 +550,7 @@ function initPosRegister() {
                     <div class="ticket-item-info">
                         <h4 class="ticket-item-title" title="${item.name}">${item.name}</h4>
                         <span class="ticket-item-meta">
+                            ${item.variantSize ? `<span class="inline-block text-[9px] bg-slate-900 text-white font-bold px-1 rounded mr-1">Size ${item.variantSize}</span>` : ''}
                             ${item.color} · ${formatRp(unitPrice)}
                             ${isWholesale ? '<span class="inline-block text-[9px] bg-amber-100 text-amber-800 font-bold px-1 rounded ml-1">Grosir</span>' : ''}
                         </span>
@@ -598,49 +599,68 @@ function initPosRegister() {
         calculateTotals();
     };
 
-    // Add product to ticket
-    productCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const id = parseInt(card.dataset.id, 10);
-            const stock = parseInt(card.dataset.stock, 10);
-            if (stock <= 0) {
+    // Add product to ticket with variant support
+    const addToTicket = (card, chosenSize = null) => {
+        const id = parseInt(card.dataset.id, 10);
+        const stock = parseInt(card.dataset.stock, 10);
+        if (stock <= 0) {
+            posAudio.warning();
+            return;
+        }
+
+        const size = chosenSize || card.dataset.size || 'Standard';
+        const color = card.dataset.color || 'Standard';
+
+        const existing = ticket.find(t => t.id === id && t.variantSize === size);
+        if (existing) {
+            if (existing.quantity < stock) {
+                existing.quantity++;
+                posAudio.beep();
+            } else if (window.showToast) {
                 posAudio.warning();
+                window.showToast(`Stok produk "${card.dataset.name}" maksimal ${stock} item.`, 'info');
                 return;
             }
+        } else {
+            posAudio.beep();
+            ticket.push({
+                id: id,
+                name: card.dataset.name,
+                category: card.dataset.category,
+                price: parseFloat(card.dataset.price),
+                originalPrice: parseFloat(card.dataset.originalPrice),
+                wholesaleMin: parseInt(card.dataset.wholesaleMin, 10) || 0,
+                wholesalePrice: parseFloat(card.dataset.wholesalePrice) || 0,
+                stock: stock,
+                image: card.dataset.image,
+                color: color,
+                size: card.dataset.size,
+                variantSize: size,
+                variantColor: color,
+                quantity: 1
+            });
+        }
 
-            const existing = ticket.find(t => t.id === id);
-            if (existing) {
-                if (existing.quantity < stock) {
-                    existing.quantity++;
-                    posAudio.beep();
-                } else if (window.showToast) {
-                    posAudio.warning();
-                    window.showToast(`Stok produk "${card.dataset.name}" maksimal ${stock} item.`, 'info');
-                    return;
-                }
-            } else {
-                posAudio.beep();
-                ticket.push({
-                    id: id,
-                    name: card.dataset.name,
-                    category: card.dataset.category,
-                    price: parseFloat(card.dataset.price),
-                    originalPrice: parseFloat(card.dataset.originalPrice),
-                    wholesaleMin: parseInt(card.dataset.wholesaleMin, 10) || 0,
-                    wholesalePrice: parseFloat(card.dataset.wholesalePrice) || 0,
-                    stock: stock,
-                    image: card.dataset.image,
-                    color: card.dataset.color,
-                    size: card.dataset.size,
-                    quantity: 1
-                });
+        renderTicket();
+
+        // Subtle click animation
+        card.classList.add('ring-2', 'ring-slate-900');
+        setTimeout(() => card.classList.remove('ring-2', 'ring-slate-900'), 200);
+    };
+
+    productCards.forEach(card => {
+        card.addEventListener('click', () => {
+            addToTicket(card);
+        });
+    });
+
+    document.querySelectorAll('.btn-quick-variant-size').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const card = btn.closest('.pos-product-card');
+            if (card) {
+                addToTicket(card, btn.dataset.size);
             }
-
-            renderTicket();
-
-            // Subtle click animation
-            card.classList.add('ring-2', 'ring-slate-900');
-            setTimeout(() => card.classList.remove('ring-2', 'ring-slate-900'), 200);
         });
     });
 

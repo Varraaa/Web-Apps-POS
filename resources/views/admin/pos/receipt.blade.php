@@ -194,6 +194,9 @@
             @foreach($order->items as $item)
                 <div class="receipt-item">
                     <div class="receipt-item-title">{{ $item->product_name }}</div>
+                    @if($item->variant_label)
+                        <div style="font-size: 10px; color: #555; margin-bottom: 2px;">{{ $item->variant_label }}</div>
+                    @endif
                     <div class="receipt-item-calc">
                         <span>{{ $item->quantity }} x Rp {{ number_format($item->price, 0, ',', '.') }}</span>
                         <b>Rp {{ number_format($item->quantity * $item->price, 0, ',', '.') }}</b>

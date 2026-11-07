@@ -79,6 +79,32 @@ class Product extends Model
         return (int) $this->wholesale_min_qty > 1 && (float) $this->wholesale_price > 0 && (float) $this->wholesale_price < $this->final_price;
     }
 
+    public function getAvailableSizesAttribute(): array
+    {
+        if (empty($this->size)) {
+            return ['All Size'];
+        }
+
+        if (str_contains($this->size, ',')) {
+            return array_map('trim', explode(',', $this->size));
+        }
+
+        return [$this->size];
+    }
+
+    public function getAvailableColorsAttribute(): array
+    {
+        if (empty($this->color)) {
+            return ['Standard'];
+        }
+
+        if (str_contains($this->color, ',')) {
+            return array_map('trim', explode(',', $this->color));
+        }
+
+        return [$this->color];
+    }
+
     public function getFormattedWholesalePriceAttribute(): string
     {
         return 'Rp '.number_format((float) $this->wholesale_price, 0, ',', '.');

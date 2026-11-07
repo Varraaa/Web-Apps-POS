@@ -707,4 +707,50 @@ class PosSystemTest extends TestCase
         $reportResponse->assertOk();
         $reportResponse->assertSee('Maya (Fashion Advisor)');
     }
+
+    public function test_pos_checkout_stores_line_item_garment_variants(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'name' => 'Kemeja Linen Oversized',
+            'price' => 250000,
+            'stock' => 10,
+            'size' => 'S, M, L, XL',
+            'color' => 'Navy, Olive, Terracotta',
+            'discount_percent' => 0,
+        ]);
+
+        $payload = [
+            'customer_name' => 'Dimas Anggara',
+            'customer_phone' => '081234567890',
+            'payment_method' => 'cash',
+            'amount_paid' => 500000,
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 2,
+                    'variant_size' => 'XL',
+                    'variant_color' => 'Terracotta',
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)
+            ->postJson(route('admin.pos.checkout'), $payload);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('order_items', [
+            'product_name' => 'Kemeja Linen Oversized',
+            'variant_size' => 'XL',
+            'variant_color' => 'Terracotta',
+            'quantity' => 2,
+        ]);
+
+        $order = Order::latest()->first();
+        $receiptResponse = $this->actingAs($admin)->get(route('admin.pos.receipt', $order));
+        $receiptResponse->assertOk();
+        $receiptResponse->assertSee('Size XL · Terracotta');
+    }
 }

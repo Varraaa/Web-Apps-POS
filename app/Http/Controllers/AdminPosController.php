@@ -92,6 +92,8 @@ class AdminPosController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.variant_size' => ['nullable', 'string', 'max:50'],
+            'items.*.variant_color' => ['nullable', 'string', 'max:50'],
         ]);
 
         $customerId = $data['customer_id'] ?? null;
@@ -132,6 +134,8 @@ class AdminPosController extends Controller
                     $orderItemsData[] = [
                         'product_id' => $product->id,
                         'product_name' => $product->name,
+                        'variant_size' => $itemInput['variant_size'] ?? $product->size,
+                        'variant_color' => $itemInput['variant_color'] ?? $product->color,
                         'quantity' => $qty,
                         'price' => $unitPrice,
                     ];

@@ -14,6 +14,8 @@ class OrderItem extends Model
         'order_id',
         'product_id',
         'product_name',
+        'variant_size',
+        'variant_color',
         'quantity',
         'price',
     ];
@@ -49,5 +51,18 @@ class OrderItem extends Model
     public function getFormattedSubtotalAttribute(): string
     {
         return 'Rp '.number_format($this->subtotal, 0, ',', '.');
+    }
+
+    public function getVariantLabelAttribute(): ?string
+    {
+        $parts = [];
+        if ($this->variant_size) {
+            $parts[] = 'Size '.$this->variant_size;
+        }
+        if ($this->variant_color) {
+            $parts[] = $this->variant_color;
+        }
+
+        return ! empty($parts) ? implode(' · ', $parts) : null;
     }
 }

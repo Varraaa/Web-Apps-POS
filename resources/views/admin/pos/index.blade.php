@@ -125,6 +125,18 @@
                                     🏷 Grosir: Min. {{ $product->wholesale_min_qty }} @ Rp {{ number_format($product->wholesale_price, 0, ',', '.') }}
                                 </span>
                             @endif
+
+                            <!-- Available Size Quick Variant Switcher -->
+                            @if(!empty($product->available_sizes))
+                                <div class="flex flex-wrap items-center gap-1 mt-1.5 pt-1 border-t border-slate-100">
+                                    <span class="text-[9px] text-slate-400 font-semibold mr-0.5">Size:</span>
+                                    @foreach($product->available_sizes as $sz)
+                                        <button type="button" class="btn-quick-variant-size text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-900 hover:text-white transition-colors text-slate-700" data-size="{{ $sz }}">
+                                            {{ $sz }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @empty
