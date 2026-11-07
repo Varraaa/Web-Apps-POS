@@ -28,6 +28,8 @@ Route::middleware('buyer')->group(function (): void {
     Route::post('/wishlist/{product}', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
     Route::post('/wishlist/{product}/move-to-cart', [WishlistController::class, 'moveToCart'])->name('wishlist.move-to-cart');
     Route::get('/tracking', [OrderTrackingController::class, 'index'])->name('tracking.index');
+    Route::get('/my-orders', [OrderTrackingController::class, 'index'])->name('store.orders.lookup');
+    Route::get('/tracking/invoice/{order}', [OrderTrackingController::class, 'invoice'])->name('tracking.invoice');
     Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
     Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{product}', [CartController::class, 'remove'])->name('cart.remove');

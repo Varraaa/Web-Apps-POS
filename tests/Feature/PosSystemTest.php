@@ -842,4 +842,74 @@ class PosSystemTest extends TestCase
         $response->assertSee('Kritis');
         $response->assertDontSee('Celana Chino Regular');
     }
+
+    public function test_customer_can_lookup_order_history_by_phone_and_view_invoice(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'name' => 'Cardigan Rajut Wool',
+            'price' => 175000,
+            'stock' => 15,
+        ]);
+
+        $orderA = Order::create([
+            'user_id' => $admin->id,
+            'invoice_number' => 'POS-20261107-AAAA',
+            'customer_name' => 'Nadia Syahrini',
+            'customer_phone' => '081299998888',
+            'shipping_address' => 'Transaksi Kasir POS',
+            'subtotal' => 175000,
+            'total' => 175000,
+            'payment_method' => 'cash',
+            'amount_paid' => 200000,
+            'change_amount' => 25000,
+            'source' => 'pos',
+            'status' => 'completed',
+        ]);
+        $orderA->items()->create([
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'price' => 175000,
+        ]);
+
+        $orderB = Order::create([
+            'user_id' => $admin->id,
+            'invoice_number' => 'POS-20261107-BBBB',
+            'customer_name' => 'Nadia Syahrini',
+            'customer_phone' => '081299998888',
+            'shipping_address' => 'Transaksi Kasir POS',
+            'subtotal' => 350000,
+            'total' => 350000,
+            'payment_method' => 'qris',
+            'amount_paid' => 350000,
+            'change_amount' => 0,
+            'source' => 'pos',
+            'status' => 'completed',
+        ]);
+        $orderB->items()->create([
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'quantity' => 2,
+            'price' => 175000,
+        ]);
+
+        // Search by phone - lists both orders
+        $searchResponse = $this->get(route('tracking.index', ['q' => '081299998888']));
+        $searchResponse->assertOk();
+        $searchResponse->assertSee('Ditemukan 2 transaksi');
+        $searchResponse->assertSee('POS-20261107-AAAA');
+        $searchResponse->assertSee('POS-20261107-BBBB');
+
+        // View invoice with valid phone verification
+        $invoiceResponse = $this->get(route('tracking.invoice', ['order' => $orderA, 'phone' => '081299998888']));
+        $invoiceResponse->assertOk();
+        $invoiceResponse->assertSee('INVOICE');
+        $invoiceResponse->assertSee('POS-20261107-AAAA');
+        $invoiceResponse->assertSee('Nadia Syahrini');
+
+        // View invoice with incorrect phone verification fails
+        $forbiddenResponse = $this->get(route('tracking.invoice', ['order' => $orderA, 'phone' => '081111111111']));
+        $forbiddenResponse->assertForbidden();
+    }
 }

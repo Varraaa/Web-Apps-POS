@@ -156,11 +156,59 @@
                             <span>💬</span> Hubungi WhatsApp Concierge Toko
                         </a>
 
-                        <a href="{{ route('admin.pos.receipt', $order) }}" target="_blank" class="btn-luxury-outline text-xs py-2.5 px-4">
-                            <span>🖨 Buka Struk Kasir / Cetak</span>
-                            <span>↗</span>
-                        </a>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('tracking.invoice', ['order' => $order, 'phone' => $order->customer_phone]) }}" target="_blank" class="btn-luxury-outline text-xs py-2.5 px-4">
+                                <span>📄 E-Invoice Resmi</span>
+                                <span>↗</span>
+                            </a>
+                            <a href="{{ route('admin.pos.receipt', $order) }}" target="_blank" class="btn-luxury-dark text-xs py-2.5 px-4">
+                                <span>🖨 Buka Struk Kasir</span>
+                                <span>↗</span>
+                            </a>
+                        </div>
                     </div>
+                </div>
+            </div>
+        @elseif(!empty($orderList) && $orderList->isNotEmpty())
+            <!-- Multiple Orders Found for Customer -->
+            <div class="space-y-4 reveal-on-scroll">
+                <div class="flex items-center justify-between px-2">
+                    <p class="text-xs font-bold text-slate-700">Ditemukan {{ $orderList->count() }} transaksi untuk "<strong>{{ $query }}</strong>":</p>
+                    <span class="text-[11px] text-slate-400">Klik transaksi untuk melihat detail lengkap</span>
+                </div>
+
+                <div class="divide-y divide-[#eeebe5] bg-white rounded-2xl border border-[#eeebe5] shadow-lg overflow-hidden">
+                    @foreach($orderList as $itemOrder)
+                        <div class="p-5 sm:p-6 hover:bg-[#faf8f5] transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2.5">
+                                    <span class="font-mono font-bold text-sm text-[#0d131a]">#{{ $itemOrder->invoice_number }}</span>
+                                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase
+                                        {{ $itemOrder->status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                                        {{ $itemOrder->status_label }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    {{ $itemOrder->created_at->format('d M Y, H:i') }} WIB · {{ $itemOrder->items->count() }} jenis item
+                                    @if($itemOrder->sales_assistant_name)
+                                        · Fashion Advisor: {{ $itemOrder->sales_assistant_name }}
+                                    @endif
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-4 justify-between sm:justify-end">
+                                <strong class="text-sm font-black text-[#0d131a]">{{ $itemOrder->formatted_total }}</strong>
+                                <div class="flex items-center gap-2">
+                                    <a href="{{ route('tracking.invoice', ['order' => $itemOrder, 'phone' => $itemOrder->customer_phone]) }}" target="_blank" class="px-3 py-1.5 rounded-lg border border-[#d4cdbf] text-[11px] font-bold text-slate-700 hover:bg-slate-100">
+                                        E-Invoice ↗
+                                    </a>
+                                    <a href="{{ route('tracking.index', ['q' => $itemOrder->invoice_number]) }}" class="btn-luxury-dark py-1.5 px-3.5 text-[11px]">
+                                        Detail Lacak →
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         @else
