@@ -547,11 +547,16 @@
             <iframe id="receipt-frame" src="" class="w-full h-80 border-0 rounded bg-white shadow-inner"></iframe>
         </div>
 
-        <div class="p-4 flex gap-2">
-            <button type="button" id="btn-print-receipt" class="pos-btn-pay flex-1 justify-center text-xs">
-                🖨 Cetak Struk Kasir
-            </button>
-            <button type="button" id="btn-close-receipt-modal" class="pos-btn-ghost text-xs">
+        <div class="p-4 flex flex-col gap-2">
+            <div class="flex gap-2">
+                <button type="button" id="btn-print-receipt" class="pos-btn-pay flex-1 justify-center text-xs">
+                    🖨 Cetak Struk Kasir
+                </button>
+                <a id="btn-wa-receipt" href="#" target="_blank" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition">
+                    <span>📲 WA</span>
+                </a>
+            </div>
+            <button type="button" id="btn-close-receipt-modal" class="pos-btn-ghost text-xs w-full">
                 Tutup (Esc)
             </button>
         </div>

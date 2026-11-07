@@ -311,6 +311,7 @@
 
     <div class="actions-bar">
         <button type="button" onclick="window.print()" class="btn-action">🖨 Cetak Struk</button>
+        <a href="{{ route('admin.pos.receipt.whatsapp', $order) }}" target="_blank" class="btn-action" style="background:#16a34a;">📲 Kirim WhatsApp</a>
         <a href="{{ route('admin.pos.index') }}" class="btn-action btn-secondary">Kembali ke POS</a>
     </div>
 

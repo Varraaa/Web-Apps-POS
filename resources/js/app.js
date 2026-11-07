@@ -1439,7 +1439,9 @@ function initPosRegister() {
                     notes: notes,
                     items: ticket.map(t => ({
                         product_id: t.id,
-                        quantity: t.quantity
+                        quantity: t.quantity,
+                        variant_size: t.variantSize || null,
+                        variant_color: t.variantColor || null
                     }))
                 })
             });
@@ -1456,6 +1458,10 @@ function initPosRegister() {
 
             // Open Receipt Modal
             receiptFrame.src = result.receipt_url;
+            const waReceiptBtn = document.getElementById('btn-wa-receipt');
+            if (waReceiptBtn && result.order_id) {
+                waReceiptBtn.href = `/admin/pos/receipt/${result.order_id}/whatsapp`;
+            }
             document.getElementById('receipt-modal-sub').textContent = `No. Struk: ${result.invoice_number}`;
             receiptModal.classList.remove('hidden');
 

@@ -46,6 +46,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/pos', [AdminPosController::class, 'index'])->name('pos.index');
     Route::post('/pos/checkout', [AdminPosController::class, 'checkout'])->name('pos.checkout');
     Route::get('/pos/receipt/{order}', [AdminPosController::class, 'receipt'])->name('pos.receipt');
+    Route::get('/pos/receipt/{order}/whatsapp', [AdminPosController::class, 'whatsappReceipt'])->name('pos.receipt.whatsapp');
     Route::get('/pos/held-bills', [AdminPosController::class, 'listHeldBills'])->name('pos.held-bills.index');
     Route::post('/pos/hold-bill', [AdminPosController::class, 'holdBill'])->name('pos.hold-bill');
     Route::post('/pos/held-bills/{heldBill}/recall', [AdminPosController::class, 'recallHeldBill'])->name('pos.held-bills.recall');

@@ -8,6 +8,7 @@ use App\Models\Discount;
 use App\Models\Order;
 use App\Models\PosHeldBill;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -388,6 +389,106 @@ class AdminPosController extends Controller
         $order->load(['items.product', 'user']);
 
         return view('admin.pos.receipt', compact('order'));
+    }
+
+    /**
+     * Generate structured WhatsApp digital receipt text and redirect to wa.me link.
+     */
+    public function whatsappReceipt(Request $request, Order $order)
+    {
+        $order->load(['items.product', 'user']);
+
+        $phone = $request->query('phone', $order->customer_phone);
+        // Clean phone number: remove non-digits, replace leading 0 with 62
+        $sanitizedPhone = preg_replace('/\D+/', '', (string) $phone);
+        if (str_starts_with($sanitizedPhone, '0')) {
+            $sanitizedPhone = '62'.substr($sanitizedPhone, 1);
+        }
+
+        $storeName = StoreSetting::get('store_name', 'VarStore Boutique');
+        $storeAddress = StoreSetting::get('store_address', 'Jl. Merdeka No. 45, Bandung');
+        $storePhone = StoreSetting::get('store_phone', '0812-3456-7890');
+
+        $lines = [];
+        $lines[] = "✨ *{$storeName}* ✨";
+        $lines[] = "_{$storeAddress}_";
+        $lines[] = "Telp/WA: {$storePhone}";
+        $lines[] = '================================';
+        $lines[] = '🧾 *STRUK DIGITAL RESMI*';
+        $lines[] = "No. Invoice : *#{$order->invoice_number}*";
+        $lines[] = 'Tanggal     : '.$order->created_at->format('d/m/Y H:i');
+        $lines[] = 'Kasir       : '.($order->cashier_name ?? 'Kasir VarStore');
+        if ($order->sales_assistant_name) {
+            $lines[] = "Fashion Adv : {$order->sales_assistant_name}";
+        }
+        $lines[] = 'Pelanggan   : '.($order->customer_name ?: 'Pelanggan Umum');
+        $lines[] = '--------------------------------';
+        $lines[] = '*DAFTAR ITEM BELANJA:*';
+
+        foreach ($order->items as $item) {
+            $variantText = $item->variant_label ? " ({$item->variant_label})" : '';
+            $lines[] = "• {$item->product_name}{$variantText}";
+            $lines[] = "  {$item->quantity} x {$item->formatted_price} = {$item->formatted_subtotal}";
+        }
+
+        $lines[] = '--------------------------------';
+        $lines[] = "Subtotal     : {$order->formatted_subtotal}";
+
+        if ((float) $order->discount_amount > 0) {
+            $couponText = $order->coupon_code ? " ({$order->coupon_code})" : '';
+            $lines[] = "Diskon{$couponText} : -Rp ".number_format((float) $order->discount_amount, 0, ',', '.');
+        }
+
+        if ((float) $order->points_discount_amount > 0) {
+            $lines[] = 'Poin Loyalty : -Rp '.number_format((float) $order->points_discount_amount, 0, ',', '.');
+        }
+
+        if ((float) $order->store_credit_used > 0) {
+            $lines[] = 'Store Credit : -Rp '.number_format((float) $order->store_credit_used, 0, ',', '.');
+        }
+
+        $lines[] = '--------------------------------';
+        $lines[] = "💰 *TOTAL AKHIR : {$order->formatted_total}*";
+
+        if ($order->is_split_payment && is_array($order->payment_breakdown)) {
+            $lines[] = 'Metode Bayar : *Split Payment*';
+            foreach ($order->payment_breakdown as $split) {
+                $mName = strtoupper($split['method'] ?? 'TUNAI');
+                $lines[] = "  - {$mName}: Rp ".number_format((float) ($split['amount'] ?? 0), 0, ',', '.');
+            }
+        } else {
+            $lines[] = 'Metode Bayar : *'.strtoupper($order->payment_method).'*';
+            $lines[] = 'Dibayar      : Rp '.number_format((float) $order->amount_paid, 0, ',', '.');
+        }
+
+        if ((float) $order->change_amount > 0) {
+            $lines[] = 'Kembalian    : Rp '.number_format((float) $order->change_amount, 0, ',', '.');
+        }
+
+        if ($order->points_earned > 0) {
+            $lines[] = "⭐ Poin Diperoleh: +{$order->points_earned} Poin";
+        }
+
+        $lines[] = '================================';
+        $lines[] = "Terima kasih telah berbelanja di *{$storeName}*! 🙏";
+        $lines[] = 'Simpan struk digital ini sebagai bukti transaksi sah.';
+
+        $messageText = implode("\n", $lines);
+        $encodedText = rawurlencode($messageText);
+
+        $whatsappUrl = $sanitizedPhone
+            ? "https://wa.me/{$sanitizedPhone}?text={$encodedText}"
+            : "https://wa.me/?text={$encodedText}";
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'whatsapp_url' => $whatsappUrl,
+                'message_text' => $messageText,
+                'phone' => $sanitizedPhone,
+            ]);
+        }
+
+        return redirect()->away($whatsappUrl);
     }
 
     /**

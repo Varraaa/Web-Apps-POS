@@ -753,4 +753,60 @@ class PosSystemTest extends TestCase
         $receiptResponse->assertOk();
         $receiptResponse->assertSee('Size XL · Terracotta');
     }
+
+    public function test_pos_whatsapp_receipt_generates_concierge_message_and_link(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'name' => 'Dress Sutra Silk',
+            'price' => 350000,
+            'stock' => 10,
+            'discount_percent' => 0,
+        ]);
+
+        $order = Order::create([
+            'user_id' => $admin->id,
+            'customer_name' => 'Clarissa Putri',
+            'customer_phone' => '081298765432',
+            'shipping_address' => 'Transaksi Kasir POS',
+            'subtotal' => 350000,
+            'discount_amount' => 0,
+            'total' => 350000,
+            'payment_method' => 'cash',
+            'amount_paid' => 400000,
+            'change_amount' => 50000,
+            'cashier_name' => 'Kasir Sarah',
+            'sales_assistant_name' => 'Maya',
+            'source' => 'pos',
+            'status' => 'completed',
+        ]);
+
+        $order->items()->create([
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'variant_size' => 'M',
+            'variant_color' => 'Emerald Green',
+            'quantity' => 1,
+            'price' => 350000,
+        ]);
+
+        // Test JSON request
+        $jsonResponse = $this->actingAs($admin)
+            ->getJson(route('admin.pos.receipt.whatsapp', $order));
+
+        $jsonResponse->assertOk();
+        $jsonResponse->assertJsonStructure(['whatsapp_url', 'message_text', 'phone']);
+        $this->assertEquals('6281298765432', $jsonResponse->json('phone'));
+        $this->assertStringContainsString('STRUK DIGITAL RESMI', $jsonResponse->json('message_text'));
+        $this->assertStringContainsString('Dress Sutra Silk', $jsonResponse->json('message_text'));
+        $this->assertStringContainsString('Size M · Emerald Green', $jsonResponse->json('message_text'));
+        $this->assertStringContainsString('Kembalian', $jsonResponse->json('message_text'));
+
+        // Test normal redirect request
+        $redirectResponse = $this->actingAs($admin)
+            ->get(route('admin.pos.receipt.whatsapp', $order));
+
+        $redirectResponse->assertRedirect();
+        $this->assertStringStartsWith('https://wa.me/6281298765432', $redirectResponse->headers->get('Location'));
+    }
 }
