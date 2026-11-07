@@ -809,4 +809,37 @@ class PosSystemTest extends TestCase
         $redirectResponse->assertRedirect();
         $this->assertStringStartsWith('https://wa.me/6281298765432', $redirectResponse->headers->get('Location'));
     }
+
+    public function test_admin_can_view_low_stock_po_reorder_sheet(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $criticalProduct = Product::factory()->create([
+            'name' => 'Blouse Sutra Ivory',
+            'stock' => 2,
+            'price' => 200000,
+            'wholesale_price' => 140000,
+            'category' => 'Atasan',
+        ]);
+
+        $safeProduct = Product::factory()->create([
+            'name' => 'Celana Chino Regular',
+            'stock' => 25,
+            'price' => 300000,
+            'category' => 'Bawahan',
+        ]);
+
+        // Guest check
+        $guestResponse = $this->get(route('admin.products.reorder-sheet'));
+        $guestResponse->assertRedirect(route('login'));
+
+        // Admin access
+        $response = $this->actingAs($admin)->get(route('admin.products.reorder-sheet', ['threshold' => 5]));
+        $response->assertOk();
+        $response->assertSee('PURCHASE ORDER', false);
+        $response->assertSee('REPLENISHMENT', false);
+        $response->assertSee('Blouse Sutra Ivory');
+        $response->assertSee('Kritis');
+        $response->assertDontSee('Celana Chino Regular');
+    }
 }

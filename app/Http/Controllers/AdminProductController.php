@@ -46,6 +46,55 @@ class AdminProductController extends Controller
         return view('admin.products.index', compact('products', 'categories', 'search', 'category', 'stockFilter'));
     }
 
+    /**
+     * Display printable purchase order replenishment sheet for low stock items.
+     */
+    public function reorderSheet(Request $request): View
+    {
+        $threshold = (int) $request->input('threshold', 5);
+        $category = $request->string('category')->trim()->toString();
+        $targetBuffer = (int) $request->input('target_buffer', 20);
+
+        $query = Product::where('stock', '<=', $threshold);
+
+        if ($category) {
+            $query->where('category', $category);
+        }
+
+        $lowStockProducts = $query->orderBy('stock')->orderBy('name')->get();
+
+        $items = $lowStockProducts->map(function (Product $product) use ($targetBuffer) {
+            $recommendedQty = max(1, $targetBuffer - $product->stock);
+            $unitCost = (float) ($product->wholesale_price ?: ($product->price * 0.70));
+            $estimatedCost = $recommendedQty * $unitCost;
+
+            return [
+                'product' => $product,
+                'current_stock' => $product->stock,
+                'recommended_qty' => $recommendedQty,
+                'unit_cost' => $unitCost,
+                'estimated_cost' => $estimatedCost,
+                'status_level' => $product->stock <= 0 ? 'Habis (Out of Stock)' : ($product->stock <= 2 ? 'Kritis (Critical)' : 'Menipis (Low)'),
+            ];
+        });
+
+        $totalEstimatedCost = $items->sum('estimated_cost');
+        $totalRecommendedUnits = $items->sum('recommended_qty');
+        $categories = Product::distinct()->pluck('category')->filter()->values();
+        $poNumber = 'PO-'.now()->format('Ymd').'-'.strtoupper(substr(md5(now()->toDateString()), 0, 4));
+
+        return view('admin.products.reorder-sheet', compact(
+            'items',
+            'threshold',
+            'targetBuffer',
+            'category',
+            'categories',
+            'totalEstimatedCost',
+            'totalRecommendedUnits',
+            'poNumber'
+        ));
+    }
+
     public function create(): View
     {
         $categories = Product::distinct()->pluck('category')->filter()->values();

@@ -11,9 +11,14 @@
             <p class="text-xs text-slate-500 mt-1">Kelola daftar busana, penentuan harga, diskon, dan kontrol stok toko.</p>
         </div>
 
-        <a href="{{ route('admin.products.create') }}" class="pos-btn-pay text-xs px-4 py-2.5">
-            <span>+ Tambah Produk Baru</span>
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin.products.reorder-sheet') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs shadow-sm transition">
+                <span>📋 PO Lembar Restock</span>
+            </a>
+            <a href="{{ route('admin.products.create') }}" class="pos-btn-pay text-xs px-4 py-2.5">
+                <span>+ Tambah Produk Baru</span>
+            </a>
+        </div>
     </div>
 
     @if (session('success'))
