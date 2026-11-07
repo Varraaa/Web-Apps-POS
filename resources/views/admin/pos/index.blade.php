@@ -215,6 +215,20 @@
                         <input type="text" id="pos-customer-phone" placeholder="08xxxxxxxxxx" class="pos-meta-input text-[11px]">
                     </div>
                 </div>
+
+                <!-- Sales Associate / Fashion Consultant Attribution -->
+                <div class="mt-2 pt-2 border-t border-slate-200">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Konsultan Fashion / SPG Bertugas</label>
+                    <div class="relative">
+                        <input list="sales-associates-list" id="pos-sales-assistant" placeholder="Pilih / ketik nama konsultan..." class="pos-meta-input text-xs">
+                        <datalist id="sales-associates-list">
+                            <option value="Maya (Fashion Advisor)">
+                            <option value="Dimas (Style Consultant)">
+                            <option value="Aisyah (Senior Stylist)">
+                            <option value="Rizky (Floor Associate)">
+                        </datalist>
+                    </div>
+                </div>
             </div>
 
             <!-- Ticket Items Scrollable List -->

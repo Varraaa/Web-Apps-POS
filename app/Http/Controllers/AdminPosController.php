@@ -87,6 +87,7 @@ class AdminPosController extends Controller
             'custom_discount_type' => ['nullable', 'string', 'in:fixed,percent'],
             'custom_discount_value' => ['nullable', 'numeric', 'min:0'],
             'custom_discount_reason' => ['nullable', 'string', 'max:255'],
+            'sales_assistant_name' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
@@ -214,6 +215,8 @@ class AdminPosController extends Controller
 
                 // Points earned for this purchase: 1 point per Rp 10.000 spent
                 $pointsEarned = $customer ? (int) floor($total / 10000) : 0;
+                $salesAssistant = trim($data['sales_assistant_name'] ?? '');
+                $salesCommission = $salesAssistant !== '' ? round($total * 0.02) : 0.0;
 
                 $order = Order::create([
                     'user_id' => $request->user()?->id,
@@ -241,6 +244,8 @@ class AdminPosController extends Controller
                     'amount_paid' => $primaryAmountPaid,
                     'change_amount' => $changeAmount,
                     'cashier_name' => $request->user()?->name ?? 'Kasir VarStore',
+                    'sales_assistant_name' => $salesAssistant ?: null,
+                    'sales_commission_amount' => $salesCommission,
                     'source' => 'pos',
                     'status' => 'completed',
                     'notes' => $notes,

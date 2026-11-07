@@ -1415,6 +1415,7 @@ function initPosRegister() {
                     custom_discount_type: appliedCustomDiscount?.type || null,
                     custom_discount_value: appliedCustomDiscount?.value || null,
                     custom_discount_reason: appliedCustomDiscount?.reason || null,
+                    sales_assistant_name: document.getElementById('pos-sales-assistant')?.value.trim() || null,
                     notes: notes,
                     items: ticket.map(t => ({
                         product_id: t.id,

@@ -68,6 +68,20 @@ class AdminReportController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        // Sales Associates / Fashion Consultants performance in period
+        $salesAssociates = (clone $ordersQuery)
+            ->whereNotNull('sales_assistant_name')
+            ->where('sales_assistant_name', '!=', '')
+            ->select(
+                'sales_assistant_name',
+                DB::raw('count(*) as count'),
+                DB::raw('sum(total) as revenue'),
+                DB::raw('sum(sales_commission_amount) as total_commission')
+            )
+            ->groupBy('sales_assistant_name')
+            ->orderByDesc('revenue')
+            ->get();
+
         return view('admin.reports.index', compact(
             'period',
             'periodLabel',
@@ -80,6 +94,7 @@ class AdminReportController extends Controller
             'paymentMethods',
             'sources',
             'topProducts',
+            'salesAssociates',
             'recentOrders'
         ));
     }

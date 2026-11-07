@@ -193,6 +193,52 @@
                     @endforelse
                 </div>
             </div>
+
+            <!-- Sales Associates Performance -->
+            @if(isset($salesAssociates) && $salesAssociates->count() > 0)
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm md:col-span-2">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="font-extrabold text-slate-900 text-sm">Konsultan Fashion & Sales Associate</h3>
+                            <p class="text-xs text-slate-500">Pencapaian penjualan floor staff dan estimasi komisi retail (2%).</p>
+                        </div>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
+                            {{ $salesAssociates->count() }} Staff Aktif
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-600 font-bold text-[10px] uppercase">
+                                <tr>
+                                    <th class="py-2 px-3">Nama Staff Associate</th>
+                                    <th class="py-2 px-3 text-center">Transaksi</th>
+                                    <th class="py-2 px-3 text-right">Total Omzet Penjualan</th>
+                                    <th class="py-2 px-3 text-right">Estimasi Komisi (2%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach($salesAssociates as $sa)
+                                    <tr class="hover:bg-slate-50/50">
+                                        <td class="py-2.5 px-3 font-bold text-slate-900">
+                                            👔 {{ $sa->sales_assistant_name }}
+                                        </td>
+                                        <td class="py-2.5 px-3 text-center font-mono">
+                                            {{ $sa->count }} transaksi
+                                        </td>
+                                        <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                                            Rp {{ number_format($sa->revenue, 0, ',', '.') }}
+                                        </td>
+                                        <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">
+                                            Rp {{ number_format($sa->total_commission, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 

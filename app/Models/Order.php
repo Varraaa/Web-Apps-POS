@@ -40,6 +40,8 @@ class Order extends Model
         'points_discount_amount',
         'store_credit_used',
         'cashier_name',
+        'sales_assistant_name',
+        'sales_commission_amount',
         'source',
         'notes',
         'whatsapp_reference',
@@ -62,6 +64,7 @@ class Order extends Model
             'store_credit_used' => 'decimal:2',
             'custom_discount_value' => 'decimal:2',
             'custom_discount_amount' => 'decimal:2',
+            'sales_commission_amount' => 'decimal:2',
         ];
     }
 
@@ -108,6 +111,11 @@ class Order extends Model
     public function getFormattedCustomDiscountAmountAttribute(): string
     {
         return 'Rp '.number_format((float) ($this->custom_discount_amount ?? 0), 0, ',', '.');
+    }
+
+    public function getFormattedSalesCommissionAmountAttribute(): string
+    {
+        return 'Rp '.number_format((float) ($this->sales_commission_amount ?? 0), 0, ',', '.');
     }
 
     public function getFormattedStoreCreditUsedAttribute(): string

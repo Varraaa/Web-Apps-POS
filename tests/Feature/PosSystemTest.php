@@ -668,4 +668,43 @@ class PosSystemTest extends TestCase
         $zResponse->assertSee('Kas Keluar Petty Cash (-):');
         $zResponse->assertSee('Beli lakban packing');
     }
+
+    public function test_pos_checkout_records_sales_assistant_attribution_and_commission(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = Product::factory()->create([
+            'price' => 200000,
+            'stock' => 5,
+            'discount_percent' => 0,
+        ]);
+
+        $payload = [
+            'customer_name' => 'Ibu Ratna',
+            'customer_phone' => '081288889999',
+            'sales_assistant_name' => 'Maya (Fashion Advisor)',
+            'payment_method' => 'cash',
+            'amount_paid' => 200000,
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ];
+
+        $response = $this->actingAs($admin)
+            ->postJson(route('admin.pos.checkout'), $payload);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('orders', [
+            'customer_name' => 'Ibu Ratna',
+            'total' => 200000,
+            'sales_assistant_name' => 'Maya (Fashion Advisor)',
+            'sales_commission_amount' => 4000, // 2% of 200.000
+        ]);
+
+        // Verify reports page displays associate sales stats
+        $reportResponse = $this->actingAs($admin)->get(route('admin.reports.index'));
+        $reportResponse->assertOk();
+        $reportResponse->assertSee('Maya (Fashion Advisor)');
+    }
 }
